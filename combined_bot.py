@@ -13,124 +13,6 @@ OWNER_ID    = 6488083580
 ALERT_ADMINS = {198027774}  # أدمنية صلاحية التنبيه فقط
 CHANNEL     = 'https://t.me/hawk0000000'
 
-# Groq AI
-GROQ_API_KEY   = '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'
-GROQ_API_KEY_2 = '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'
-GROQ_API_KEY_3 = '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'
-GROQ_URL       = 'https://api.groq.com/openai/v1/chat/completions'
-GROQ_MODEL     = 'llama-3.3-70b-versatile'
-
-AI_SYSTEM = """أنت مساعد ذكي اسمك "صقر العراق"، تم برمجتك بواسطة فريق صقور العراق.
-تتحدث باللغة العربية الفصحى الواضحة والمهذبة دائماً.
-تخصصك الأساسي: مساعدة سائقي التكسي في العراق (Uber, Baly, Oper).
-
-معلومات مهمة:
-- قناة التيليغرام: https://t.me/hawk0000000
-- التسجيل في Uber: https://t.uber.com/referral/?invite_code=pdfzza5xcq62
-- ربط Uber بالماستر كارد: https://youtube.com/shorts/wIuGIeqU0Jo
-- ربط كريم بـ Uber: https://youtube.com/shorts/4B5DIulق3uw
-
-عند سؤالك عن هويتك: قل "أنا صقر العراق، برمجني فريق صقور العراق 🦅"
-
-قواعد مهمة جداً:
-1. تحدث دائماً باللغة العربية الفصحى الواضحة فقط — لا تستخدم اللهجة العامية أبداً
-2. إذا ما تعرف الجواب بشكل مؤكد، قل بصراحة "لا أعلم" أو "لا تتوفر لديّ معلومة عن هذا"
-3. لا تخترع معلومات أو أسماء أو تفاصيل غير موجودة — هذا خطأ كبير
-4. إذا سُئلت عن شخص أو شيء غير معروف، قل "لم أسمع بهذا الاسم، يرجى التحقق منه"
-5. اجعل ردودك مختصرة وواضحة — لا تزيد عن 5 أسطر إلا إذا طُلب التفصيل"""
-
-# سجل المحادثات لكل مستخدم (لحفظ سياق المحادثة)
-user_histories = {}
-
-# ═══════════════════════════════════════
-# 🔍 بحث DuckDuckGo - مجاني بدون مفتاح
-# ═══════════════════════════════════════
-
-def duckduckgo_search(query):
-    """يبحث في DuckDuckGo ويرجع ملخص النتائج"""
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        url = f"https://api.duckduckgo.com/?q={requests.utils.quote(query)}&format=json&no_html=1&skip_disambig=1"
-        res = requests.get(url, headers=headers, timeout=8)
-        data = res.json()
-        results = []
-        if data.get('AbstractText'):
-            results.append(data['AbstractText'])
-        if data.get('Answer'):
-            results.append(data['Answer'])
-        if not results and data.get('RelatedTopics'):
-            for topic in data['RelatedTopics'][:3]:
-                if isinstance(topic, dict) and topic.get('Text'):
-                    results.append(topic['Text'])
-        return "\n".join(results[:3]) if results else None
-    except Exception:
-        return None
-
-def needs_search(text):
-    """يحدد إذا السؤال يحتاج بحث في الإنترنت"""
-    keywords = [
-        'من هو', 'من هي', 'ما هو', 'ما هي', 'شنو', 'شو',
-        'متى', 'وين', 'كيف', 'ليش', 'سبب', 'معنى',
-        'اغنية', 'مطرب', 'فنان', 'لاعب', 'فيلم', 'مسلسل',
-        'اخبار', 'خبر', 'تاريخ', 'دولة', 'مدينة', 'شركة',
-        'رياضة', 'كرة', 'سياسة', 'اقتصاد'
-    ]
-    return any(kw in text for kw in keywords)
-
-def groq_ai_reply(user_text):
-    """يرسل رسالة لـ Groq ويرجع الرد — مفتاحان احتياطي"""
-    for api_key in [GROQ_API_KEY, GROQ_API_KEY_2, GROQ_API_KEY_3]:
-        try:
-            response = requests.post(
-                GROQ_URL,
-                headers={
-                    'Content-Type': 'application/json',
-                    'Authorization': f'Bearer {api_key}'
-                },
-                json={
-                    'model': GROQ_MODEL,
-                    'messages': [
-                        {'role': 'system', 'content': AI_SYSTEM},
-                        {'role': 'user', 'content': user_text}
-                    ],
-                    'max_tokens': 500,
-                    'temperature': 0.4
-                },
-                timeout=15
-            )
-            if response.status_code == 200:
-                return response.json()['choices'][0]['message']['content'].strip()
-        except Exception:
-            continue
-    return None
-
-def groq_reply(user_id, user_text):
-    """يرسل رسالة لـ Groq"""
-    if user_id not in user_histories:
-        user_histories[user_id] = []
-
-    history = user_histories[user_id]
-
-    # ابحث في الإنترنت إذا السؤال يحتاجه
-    search_context = ""
-    if needs_search(user_text):
-        search_result = duckduckgo_search(user_text)
-        if search_result:
-            search_context = f"\n\n[معلومة من الإنترنت]:\n{search_result}\n[استخدم هذه المعلومة للإجابة بدقة]"
-
-    full_text = user_text + search_context
-
-    reply = groq_ai_reply(full_text)
-    if reply:
-        history.append({'role': 'user', 'content': user_text})
-        history.append({'role': 'assistant', 'content': reply})
-        if len(history) > 20:
-            user_histories[user_id] = history[-20:]
-        return reply
-
-    return "⚠️ الخدمة مشغولة حالياً، حاول بعد دقيقة."
-
-
 # --- القائمة البيضاء ---
 WHITELIST_LINKS = [
     't.me/hawk0000000',
@@ -138,8 +20,8 @@ WHITELIST_LINKS = [
     'youtu.be',
     'tiktok.com',
     'instagram.com',
-    'waze.com',  # ✅ روابط Waze
-    'facebook.com',  # ✅ روابط فيسبوك
+    'waze.com',
+    'facebook.com',
     'fb.com',
     'fb.watch'
 ]
@@ -148,19 +30,18 @@ bot = telebot.TeleBot(BOT_TOKEN)
 DB_FILE      = "users_db.txt"
 VIDEOS_FILE  = "videos_db.json"
 BUTTONS_FILE = "buttons_db.json"
-GROUPS_FILE  = "groups_db.txt"  # حفظ المجموعات
+GROUPS_FILE  = "groups_db.txt"
 
 pending_admin   = {}
 pending_video   = {}
 pending_mention = {}
-glitch_sessions = {}  # {chat_id_msgid: {count, chat_id, user_id, msg_id, target_msg_id}}
+glitch_sessions = {}
 
 # ═══════════════════════════════════════
 # 📋 حفظ المجموعات تلقائياً
 # ═══════════════════════════════════════
 
-# المجموعات الثابتة — تُضاف دائماً حتى لو فارغ الملف
-DEFAULT_GROUPS = set()  # سيتم تعبئتها بعد جلب الـ chat_id
+DEFAULT_GROUPS = set()
 
 def load_groups():
     groups = set(DEFAULT_GROUPS)
@@ -181,7 +62,7 @@ def save_group(chat_id):
 active_groups = load_groups()
 
 # ═══════════════════════════════════════
-# 📸 الصورة الإعلانية (يدوي فقط)
+# 📸 الصورة الإعلانية
 # ═══════════════════════════════════════
 
 DAILY_PHOTO_URL = "https://a.top4top.io/p_3732sxkcf0.png"
@@ -251,7 +132,7 @@ replied_users = load_users()
 videos_db     = load_videos()
 
 # ═══════════════════════════════════════
-# 👥 أعضاء سبق الرد عليهم — يُحذف مباشرة
+# 👥 أعضاء سبق الرد عليهم
 # ═══════════════════════════════════════
 PRE_REPLIED = [
     5633215088, 6488083580, 7609125208, 6795035237, 8539562017,
@@ -268,7 +149,6 @@ PRE_REPLIED = [
     643244393,  5178534518, 1116833219, 1215608520, 7725269843,
 ]
 
-# أضفهم لقاعدة البيانات تلقائياً
 for uid in PRE_REPLIED:
     uid_str = str(uid)
     if uid_str not in replied_users:
@@ -276,7 +156,7 @@ for uid in PRE_REPLIED:
         save_user(uid_str)
 
 # ═══════════════════════════════════════
-# 🎬 الفيديوهات الثابتة — لا تُمسح أبداً
+# 🎬 الفيديوهات الثابتة
 # ═══════════════════════════════════════
 FIXED_VIDEOS = {
     "oper_pay":      "BAACAgIAAxkBAAIDGGmbIPGGhh4Q2OkKCjDHP20p9iweAAKHlwACv-DYSG4MDukpCf0tOgQ",
@@ -290,8 +170,6 @@ FIXED_VIDEOS = {
     "uber_pay":      "BAACAgIAAxkBAAID5mmlkRH-iaBVRCS_kW-R7MSCU_9RAAITjwAC5XsQSVw4Yd0kWt23OgQ",
 }
 
-# دمج الفيديوهات الثابتة مع قاعدة البيانات
-# الفيديوهات الثابتة لها الأولوية دائماً
 for key, file_id in FIXED_VIDEOS.items():
     videos_db[key] = file_id
 save_videos(videos_db)
@@ -322,7 +200,6 @@ def contains_url(text):
     )
     return bool(url_pattern.search(text))
 
-# كلمات تدل على محتوى إباحي
 ADULT_KEYWORDS = [
     'porn', 'xxx', 'sex', 'nude', 'naked', 'onlyfans',
     'xvideos', 'xnxx', 'pornhub', 'redtube', 'youporn', 'brazzers',
@@ -332,14 +209,12 @@ ADULT_KEYWORDS = [
 ]
 
 def is_adult_content(text):
-    """يكشف المحتوى الإباحي في النص أو الرابط"""
     if not text:
         return False
     text_lower = text.lower()
     return any(kw in text_lower for kw in ADULT_KEYWORDS)
 
 def is_suspicious_url(text):
-    """يكشف أي رابط غير مدرج في القائمة البيضاء"""
     if not text:
         return False
     url_pattern = re.compile(r'(https?://\S+|www\.\S+)', re.IGNORECASE)
@@ -362,7 +237,6 @@ def send_delayed_voice(chat_id, message_id):
             'CQACAgIAAxkBAAIEIWmodiU9smBOQ4lZG7hc5yU785pvAAJVlAACB05JSbPIhdoDGKQlOgQ'
         ]
         chosen_voice = random.choice(voices)
-        # زر يفتح البوت في الخاص
         bot_info = bot.get_me()
         markup = telebot.types.InlineKeyboardMarkup()
         markup.add(telebot.types.InlineKeyboardButton(
@@ -439,12 +313,11 @@ def get_admin_panel():
         telebot.types.InlineKeyboardButton("🚖 إدارة أزرار Uber",             callback_data="adm_list_uber"),
         telebot.types.InlineKeyboardButton("🎬 تغيير فيديو زر",               callback_data="adm_change_video"),
         telebot.types.InlineKeyboardButton("📢 إرسال تنبيه للمجموعات",        callback_data="adm_alert"),
-        telebot.types.InlineKeyboardButton("📍 تجمع",                            callback_data="adm_gather"),
+        telebot.types.InlineKeyboardButton("📍 تجمع",                          callback_data="adm_gather"),
     )
     return markup
 
 def get_gather_groups_menu():
-    """قائمة المجموعات لتجمع"""
     groups = load_groups()
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     for gid in groups:
@@ -461,7 +334,6 @@ def get_gather_groups_menu():
     return markup
 
 def get_groups_menu():
-    """قائمة المجموعات المحفوظة للاختيار"""
     groups = load_groups()
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     for gid in groups:
@@ -512,7 +384,6 @@ def handle_callbacks(call):
     user_id = call.from_user.id
     data    = call.data
 
-    # ✅ زر تم التصليح
     if data.startswith('glitch_fixed_'):
         try:
             bot.send_photo(chat_id, FIXED_PHOTO)
@@ -548,8 +419,7 @@ def handle_callbacks(call):
         return
 
     if data == "mc_fix":
-        try:
-            bot.delete_message(chat_id, call.message.message_id)
+        try: bot.delete_message(chat_id, call.message.message_id)
         except: pass
         try:
             bot.send_video(
@@ -563,8 +433,7 @@ def handle_callbacks(call):
         return
 
     if data == "mc_get":
-        try:
-            bot.delete_message(chat_id, call.message.message_id)
+        try: bot.delete_message(chat_id, call.message.message_id)
         except: pass
         try:
             bot.send_video(
@@ -624,7 +493,6 @@ def handle_callbacks(call):
             bot.answer_callback_query(call.id, "⚠️ انتهت الجلسة، أرسل الفيديو مجدداً", show_alert=True)
         return
 
-    # أزرار لوحة الإدارة
     if data == "adm_back":
         try: bot.edit_message_text('⚙️ لوحة الإدارة:', chat_id, call.message.message_id, reply_markup=get_admin_panel())
         except: pass
@@ -686,7 +554,6 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
-    # 📍 زر تجمع → اطلب الصورة أولاً
     if data == "adm_gather":
         if user_id != OWNER_ID and user_id not in ALERT_ADMINS:
             bot.answer_callback_query(call.id, "🚫 غير مصرح", show_alert=True)
@@ -698,7 +565,6 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
-    # 📢 زر إرسال التنبيه → اعرض المجموعات
     if data == "adm_alert":
         if user_id != OWNER_ID and user_id not in ALERT_ADMINS:
             bot.answer_callback_query(call.id, "🚫 غير مصرح", show_alert=True)
@@ -708,7 +574,6 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
-    # 📍 اختيار مجموعة التجمع → اطلب الموقع
     if data.startswith("gather_group_"):
         if user_id != OWNER_ID and user_id not in ALERT_ADMINS:
             bot.answer_callback_query(call.id, "🚫 غير مصرح", show_alert=True)
@@ -725,12 +590,11 @@ def handle_callbacks(call):
         bot.answer_callback_query(call.id)
         return
 
-    # 📢 اختيار مجموعة → اطلب الصورة
     if data.startswith("alert_group_"):
         if user_id != OWNER_ID and user_id not in ALERT_ADMINS:
             bot.answer_callback_query(call.id, "🚫 غير مصرح", show_alert=True)
             return
-        target = data[12:]  # all أو chat_id
+        target = data[12:]
         pending_admin[user_id] = {'action': 'send_alert', 'target': target}
         try: bot.delete_message(chat_id, call.message.message_id)
         except: pass
@@ -750,13 +614,11 @@ def start_command(message):
     user_id    = message.from_user.id
     first_name = message.from_user.first_name or "أخي"
 
-    # الأونر يفتح لوحة الإدارة
     if user_id == OWNER_ID:
         bot.send_message(message.chat.id, '⚙️ لوحة الإدارة - اختر ما تريد تعديله:',
                          reply_markup=get_admin_panel())
         return
 
-    # أدمنية التنبيه → يفتح لهم زر التنبيه فقط
     if user_id in ALERT_ADMINS:
         markup = telebot.types.InlineKeyboardMarkup(row_width=1)
         markup.add(telebot.types.InlineKeyboardButton("📢 إرسال تنبيه للمجموعات", callback_data="adm_alert"))
@@ -764,19 +626,19 @@ def start_command(message):
         bot.send_message(message.chat.id, '📢 لوحة التنبيهات:', reply_markup=markup)
         return
 
-    # ترحيب لأي عضو
     welcome = (
         f"🦅 ياهلا ومرحبا بيك حياك الله {first_name}!\n\n"
-        f"أنا صقر العراق، مساعدك الذكي 🤖\n"
-        f"اسألني أي سؤال عن Uber أو Baly أو Oper،\n"
-        f"أو أي سؤال ثاني تريده وأجاوبك بسرعة! ⚡\n"
-        f"أنا مطور باتقان لاجابتك في اي سؤال 🎯\n\n"
+        f"أنا صقر العراق، مساعدك 🤖\n"
+        f"اضغط على الأزرار أدناه لمشاهدة الفيديوهات التعليمية\n"
+        f"عن Uber أو Baly أو Oper ⚡\n\n"
         f"📢 قناتنا: https://t.me/hawk0000000\n"
         f"👥 مجموعتنا: https://t.me/FalconsofIraq\n\n"
         f"تحية طيبة لكم 🌹\n"
         f"إدارة كباتن صقور العراق 🦅"
     )
-    bot.send_message(message.chat.id, welcome, disable_web_page_preview=True)
+    bot.send_message(message.chat.id, welcome,
+                     reply_markup=get_main_menu(),
+                     disable_web_page_preview=True)
 
 
 # ═══════════════════════════════════════
@@ -860,14 +722,12 @@ def handle_admin_input(message):
         bot.reply_to(message, f"✅ تم إضافة الزر: {label}\nسيظهر فوراً! 🎉")
         return
 
-    # 📍 تجمع — خطوة 1: استقبال الصورة → اعرض المجموعات
     if action == 'gather_photo' and message.content_type == 'photo':
         file_id = message.photo[-1].file_id
         pending_admin[user_id] = {'action': 'gather_photo_done', 'gather_file_id': file_id}
         bot.reply_to(message, "✅ تم استلام الصورة!\nاختر المجموعة:", reply_markup=get_gather_groups_menu())
         return
 
-    # 📍 تجمع — خطوة 2: استقبال الموقع (نص أو تخطي)
     if action == 'gather_location' and message.content_type == 'text':
         target  = state['target']
         file_id = state['gather_file_id']
@@ -885,14 +745,11 @@ def handle_admin_input(message):
         return
 
     if action == 'send_alert' and message.content_type == 'photo':
-        target = state['target']
+        target  = state['target']
         file_id = message.photo[-1].file_id
-        groups = load_groups()
+        groups  = load_groups()
+        send_to = list(groups) if target == 'all' else [int(target)]
         success = 0
-        if target == 'all':
-            send_to = list(groups)
-        else:
-            send_to = [int(target)]
         for gid in send_to:
             try:
                 bot.send_photo(gid, file_id, caption="https://t.me/FalconsofIraq")
@@ -913,83 +770,29 @@ def handle_admin_input(message):
                      func=lambda m: m.chat.type == 'private' and m.from_user.id == OWNER_ID)
 def handle_private_video(message):
     if message.from_user.id in pending_admin:
-        return  # handle_admin_input يتكفل بها
+        return
     pending_video[message.from_user.id] = message.video.file_id
     bot.reply_to(message, "📹 تم استلام الفيديو!\nاختر الزر الذي تريد ربطه بهذا الفيديو:",
                  reply_markup=get_assign_buttons())
 
 
 # ═══════════════════════════════════════
-# ⭐ الخاص: Groq AI للأعضاء العاديين
+# خاص: رسائل الأعضاء العاديين → القائمة فقط
 # ═══════════════════════════════════════
-
-def detect_app_question(text):
-    """يكشف إذا السؤال عن Baly أو Uber أو Oper ويرجع نوع القائمة"""
-    text_lower = text.lower()
-
-    baly_words  = ['بلي', 'baly', 'بايلي', 'بالي']
-    uber_words  = ['اوبر', 'uber', 'أوبر', 'يوبر']
-    oper_words  = ['اوبر', 'oper', 'أوبر ايتس', 'اوبر ايتس']
-
-    # كلمات تدل على سؤال عملي (تسديد، سحب، ربط...)
-    action_words = [
-        'سدد', 'تسديد', 'ادفع', 'دفع', 'سحب', 'مستحقات',
-        'ربط', 'تسجيل', 'اشتغل', 'شغل', 'كيف', 'طريقة',
-        'ماستر', 'كارد', 'بطاقة', 'كريم', 'رحلة', 'الغاء',
-        'بلوك', 'منع', 'دعم', 'مشكلة', 'خطأ', 'ايش', 'شلون'
-    ]
-
-    has_action = any(w in text_lower for w in action_words)
-
-    if any(w in text_lower for w in baly_words):
-        return 'baly' if has_action else None
-    if any(w in text_lower for w in uber_words):
-        return 'uber' if has_action else None
-    if any(w in text_lower for w in oper_words):
-        return 'oper' if has_action else None
-    return None
-
-def get_private_app_menu(app_type):
-    """يرجع قائمة inline للخاص حسب التطبيق"""
-    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
-    if app_type == 'baly':
-        markup.add(
-            telebot.types.InlineKeyboardButton("💳 طريقة تسديد Baly", callback_data="btn_baly_pay"),
-        )
-    elif app_type == 'uber':
-        buttons_db = load_buttons()
-        for btn in buttons_db.get('uber', []):
-            markup.add(telebot.types.InlineKeyboardButton(btn['label'], callback_data=f"btn_{btn['key']}"))
-    elif app_type == 'oper':
-        markup.add(
-            telebot.types.InlineKeyboardButton("💳 طريقة تسديد Oper", callback_data="btn_oper_pay"),
-        )
-    return markup
 
 @bot.message_handler(content_types=['text'],
-                     func=lambda m: m.chat.type == 'private' and m.from_user.id != OWNER_ID)
-def handle_private_ai(message):
-    text = message.text.strip() if message.text else ""
-    if not text:
-        return
-
-    bot.send_chat_action(message.chat.id, 'typing')
-
-    # تحقق إذا السؤال عن تطبيق معين
-    app_type = detect_app_question(text)
-
-    reply = groq_reply(message.from_user.id, text)
-
-    if app_type:
-        # أرسل الرد + القائمة المنسدلة
-        bot.reply_to(message, reply + "\n\n👇 اضغط على الزر لمشاهدة الفيديو:",
-                     reply_markup=get_private_app_menu(app_type))
-    else:
-        bot.reply_to(message, reply)
+                     func=lambda m: m.chat.type == 'private' and m.from_user.id != OWNER_ID
+                                    and m.from_user.id not in ALERT_ADMINS)
+def handle_private_message(message):
+    bot.send_message(
+        message.chat.id,
+        "👇 اختر ما تريد معرفته:",
+        reply_markup=get_main_menu()
+    )
 
 
 # ═══════════════════════════════════════
-# معالج رسائل المجموعة — بدون تغيير
+# معالج رسائل المجموعة
 # ═══════════════════════════════════════
 
 @bot.message_handler(content_types=['sticker', 'animation', 'video_note', 'voice'])
@@ -1006,7 +809,6 @@ def handle_hero_logic(message):
     user_id_str = str(user_id)
     is_group    = message.chat.type in ['group', 'supergroup']
 
-    # حفظ المجموعة تلقائياً
     if is_group:
         save_group(chat_id)
 
@@ -1045,7 +847,7 @@ def handle_hero_logic(message):
         ).start()
         return
 
-    # ⭐ رقم 1 — إرسال الصورة الإعلانية فوراً (للأدمن فقط)
+    # ⭐ رقم 1 — إرسال الصورة الإعلانية (للأدمن فقط)
     if is_group and text.strip() == '1' and is_admin(chat_id, user_id):
         try: bot.delete_message(chat_id, message.message_id)
         except: pass
@@ -1098,9 +900,7 @@ def handle_hero_logic(message):
         return
 
     # حصانة القناة والروابط البيضاء
-    # فحص النص العادي
     text_has_whitelist = any(link in text.lower() for link in WHITELIST_LINKS)
-    # فحص الـ entities (روابط مضمنة مثل فيسبوك)
     entity_urls = []
     all_entities = (message.entities or []) + (message.caption_entities or [])
     for ent in all_entities:
@@ -1116,14 +916,12 @@ def handle_hero_logic(message):
        text_has_whitelist or entity_has_whitelist:
         return
 
-    # استثناء text_mention (اسم أزرق بدون @) — لا تحذف
     _all_ents = (message.entities or []) + (message.caption_entities or [])
     if any(e.type == 'text_mention' for e in _all_ents):
         return
 
     # منطق التاك @
     if '@' in text:
-        # استثناء رسائل MTProxy
         if 'proxytop' in text.lower() or 'mtproto' in text.lower() or 'proxy' in text.lower():
             return
         if word_count > 1:
@@ -1131,7 +929,6 @@ def handle_hero_logic(message):
             except: pass
         return
 
-    # استثناء الإيموجي
     if message.content_type == 'text' and is_emoji_only(text):
         return
 
@@ -1145,15 +942,12 @@ def handle_hero_logic(message):
     )
     if _is_channel_fwd:
         if not is_admin(chat_id, user_id):
-            # عضو عادي: إذا فيه كابشن → حذف بعد 10 دقائق، بدون كابشن → يبقى
             if text.strip():
                 threading.Thread(target=delete_message_after, args=(chat_id, message.message_id, 600)).start()
             return
         else:
-            # أدمن: يبقى بدون حذف
             return
 
-    # استثناء الأدمن
     if is_admin(chat_id, user_id):
         return
 
@@ -1169,11 +963,10 @@ def handle_hero_logic(message):
         except: pass
         return
 
-    # 🚫 رابط مشبوه (خارج القائمة البيضاء) → حذف فوري
+    # 🚫 رابط مشبوه → حذف فوري
     if is_suspicious_url(text):
         try: bot.delete_message(chat_id, message.message_id)
         except: pass
-        # إذا الرابط يحتوي على _bot → تقييد فوري أيضاً
         bot_username = bot.get_me().username
         WHITELISTED_BOTS = [bot_username.lower(), 'iiqqsk_bot']
         bot_mentioned = any(f'@{b}' in text.lower() or f't.me/{b}' in text.lower() for b in WHITELISTED_BOTS)
@@ -1186,7 +979,7 @@ def handle_hero_logic(message):
             except: pass
         return
 
-    # 🚫 بوت سبام (_bot) → حذف + تقييد فوري (مع استثناء البوتات في القائمة البيضاء)
+    # 🚫 بوت سبام → حذف + تقييد فوري
     bot_username = bot.get_me().username
     WHITELISTED_BOTS2 = [bot_username.lower(), 'iiqqsk_bot']
     bot_mentioned2 = any(f'@{b}' in text.lower() or f't.me/{b}' in text.lower() for b in WHITELISTED_BOTS2)
@@ -1209,18 +1002,15 @@ def handle_hero_logic(message):
             except: pass
             return
         if 4 <= word_count <= 10:
-            # 4 إلى 10 كلمات → حذف بعد 5 دقائق
             threading.Thread(target=delete_message_after, args=(chat_id, message.message_id, 300)).start()
             return
         if 2 <= word_count <= 3:
-            # كلمتين أو ثلاث → حذف بعد ربع ساعة
             threading.Thread(target=delete_message_after, args=(chat_id, message.message_id, 900)).start()
             return
         return
 
     # نصوص
     if message.content_type == 'text':
-        # استثناء الأرقام — لا تُحذف نهائياً
         if re.fullmatch(r'[\d\s\+\-\.،,]+', text.strip()):
             return
         if word_count >= 6:
@@ -1234,54 +1024,34 @@ def handle_hero_logic(message):
         replied_users[user_id_str] = True
         save_user(user_id_str)
         threading.Thread(target=send_delayed_voice, args=(chat_id, message.message_id)).start()
-        # كلمة أو كلمتان → تحذف بعد 6 ساعات | غير ذلك → ربع ساعة
         delay = 21600 if word_count <= 2 else 900
         threading.Thread(target=delete_message_after, args=(chat_id, message.message_id, delay)).start()
 
 
 # ═══════════════════════════════════════
-# تشغيل البوت
-# ═══════════════════════════════════════
-
-def resolve_default_groups():
-    """يجلب chat_id للمجموعات الثابتة من اليوزرنيم ويحفظها"""
-    usernames = ['FalconsofIraq']
-    for username in usernames:
-        try:
-            chat = bot.get_chat(f'@{username}')
-            save_group(chat.id)
-            print(f"✅ تم تسجيل مجموعة: {chat.title} ({chat.id})")
-        except Exception as e:
-            print(f"⚠️ تعذر جلب {username}: {e}")
-
-# ═══════════════════════════════════════
 # 🔧 نظام الخلل الفني (#)
 # ═══════════════════════════════════════
 
-GLITCH_PHOTO   = "https://a.top4top.io/p_3746yndx10.jpg"
-FIXED_PHOTO    = "https://b.top4top.io/p_37460fvh20.jpg"
+GLITCH_PHOTO = "https://a.top4top.io/p_3746yndx10.jpg"
+FIXED_PHOTO  = "https://b.top4top.io/p_37460fvh20.jpg"
 
 def send_glitch_cycle(chat_id, target_user_id, target_msg_id, session_key, count, target_name="", target_text=""):
-    """يرسل دورة خلل فني (مرتين بفارق 5 دقائق)"""
     try:
         is_last = (count >= 2)
-        markup = None
+        markup  = None
         if is_last:
             markup = telebot.types.InlineKeyboardMarkup()
             markup.add(telebot.types.InlineKeyboardButton(
                 "✅ هل تم التصليح؟",
                 callback_data=f"glitch_fixed_{session_key}"
             ))
-        # أرسل صورة الخلل بدون كابشن
         bot.send_photo(chat_id, GLITCH_PHOTO, reply_markup=markup)
-        # حول البصمة الأصلية دائماً
         try:
             bot.forward_message(chat_id, chat_id, target_msg_id)
         except:
             pass
-        # إذا لم نصل للمرتين، جدول الدورة التالية
         if not is_last:
-            time.sleep(300)  # 5 دقائق
+            time.sleep(300)
             send_glitch_cycle(chat_id, target_user_id, target_msg_id, session_key, count + 1, target_name, target_text)
     except Exception as e:
         print(f"glitch error: {e}")
@@ -1299,10 +1069,8 @@ def handle_glitch_command(message):
     target_msg_id = message.reply_to_message.message_id
     target_user   = message.reply_to_message.from_user
     session_key   = f"{chat_id}_{target_msg_id}"
-    # احذف أمر #
     try: bot.delete_message(chat_id, message.message_id)
     except: pass
-    # ابدأ الدورة في thread منفصل
     threading.Thread(
         target=send_glitch_cycle,
         args=(chat_id, target_user.id, target_msg_id, session_key, 1)
@@ -1313,14 +1081,28 @@ def handle_glitch_fixed(call):
     try:
         bot.send_photo(call.message.chat.id, FIXED_PHOTO)
         bot.answer_callback_query(call.id)
-        # احذف رسالة الزر
         try: bot.delete_message(call.message.chat.id, call.message.message_id)
         except: pass
     except Exception as e:
         print(f"glitch_fixed error: {e}")
 
+
+# ═══════════════════════════════════════
+# تشغيل البوت
+# ═══════════════════════════════════════
+
+def resolve_default_groups():
+    usernames = ['FalconsofIraq']
+    for username in usernames:
+        try:
+            chat = bot.get_chat(f'@{username}')
+            save_group(chat.id)
+            print(f"✅ تم تسجيل مجموعة: {chat.title} ({chat.id})")
+        except Exception as e:
+            print(f"⚠️ تعذر جلب {username}: {e}")
+
 if __name__ == "__main__":
-    print("✅ البوت يعمل مع Groq AI...")
+    print("✅ البوت يعمل...")
     resolve_default_groups()
     while True:
         try:
