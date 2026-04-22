@@ -388,6 +388,7 @@ def get_main_menu():
         telebot.types.InlineKeyboardButton("🚖 حول Uber", callback_data="menu_uber"),
         telebot.types.InlineKeyboardButton("🟢 حول Baly", callback_data="menu_baly"),
         telebot.types.InlineKeyboardButton("🟡 حول Oper", callback_data="menu_oper"),
+        telebot.types.InlineKeyboardButton("💳 ماستر كارد", callback_data="menu_mastercard"),
     )
     return markup
 
@@ -411,6 +412,15 @@ def get_oper_menu():
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         telebot.types.InlineKeyboardButton("💳 تسديد Oper", callback_data="btn_oper_pay"),
+        telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data="menu_back"),
+    )
+    return markup
+
+def get_mastercard_menu():
+    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
+    markup.add(
+        telebot.types.InlineKeyboardButton("🔧 حل مشكلة الماستر كارد", callback_data="mc_fix"),
+        telebot.types.InlineKeyboardButton("💳 الحصول على الماستر", callback_data="mc_get"),
         telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data="menu_back"),
     )
     return markup
@@ -528,6 +538,42 @@ def handle_callbacks(call):
     if data == "menu_oper":
         try: bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_oper_menu())
         except: pass
+        bot.answer_callback_query(call.id)
+        return
+
+    if data == "menu_mastercard":
+        try: bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_mastercard_menu())
+        except: pass
+        bot.answer_callback_query(call.id)
+        return
+
+    if data == "mc_fix":
+        try:
+            bot.delete_message(chat_id, call.message.message_id)
+        except: pass
+        try:
+            bot.send_video(
+                chat_id,
+                "https://a.top4top.io/m_37642ygkt0.mp4",
+                caption="🔧 حل مشكلة الماستر كارد\n\n📢 " + CHANNEL
+            )
+        except Exception as e:
+            bot.send_message(chat_id, f"⚠️ خطأ في إرسال الفيديو: {e}")
+        bot.answer_callback_query(call.id)
+        return
+
+    if data == "mc_get":
+        try:
+            bot.delete_message(chat_id, call.message.message_id)
+        except: pass
+        try:
+            bot.send_video(
+                chat_id,
+                "https://i.top4top.io/m_37646npju0.mp4",
+                caption="💳 الحصول على الماستر\n\n📢 " + CHANNEL
+            )
+        except Exception as e:
+            bot.send_message(chat_id, f"⚠️ خطأ في إرسال الفيديو: {e}")
         bot.answer_callback_query(call.id)
         return
 
