@@ -771,9 +771,13 @@ def handle_admin_input(message):
 def handle_private_video(message):
     if message.from_user.id in pending_admin:
         return
-    pending_video[message.from_user.id] = message.video.file_id
-    bot.reply_to(message, "📹 تم استلام الفيديو!\nاختر الزر الذي تريد ربطه بهذا الفيديو:",
-                 reply_markup=get_assign_buttons())
+    file_id = message.video.file_id
+    pending_video[message.from_user.id] = file_id
+    # ✅ إرسال الـ File ID أولاً قابل للنسخ
+    bot.reply_to(message, f"🆔 <b>File ID:</b>\n<code>{file_id}</code>", parse_mode="HTML")
+    # ثم أزرار الربط
+    bot.send_message(message.chat.id, "📹 اختر الزر الذي تريد ربطه بهذا الفيديو:",
+                     reply_markup=get_assign_buttons())
 
 
 # ═══════════════════════════════════════
@@ -1111,4 +1115,3 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ خطأ: {e}")
             time.sleep(10)
-
