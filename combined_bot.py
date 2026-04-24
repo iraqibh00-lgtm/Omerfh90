@@ -424,7 +424,7 @@ def handle_callbacks(call):
         try:
             bot.send_video(
                 chat_id,
-                "https://a.top4top.io/m_37642ygkt0.mp4",
+                "BAACAgIAAxkBAAIJDmnogyobeAzRreu4_q0o2rcPQLlhAAIpogACHxVAS0e-x-MgxJtTOwQ",
                 caption="🔧 حل مشكلة الماستر كارد\n\n📢 " + CHANNEL
             )
         except Exception as e:
@@ -438,7 +438,7 @@ def handle_callbacks(call):
         try:
             bot.send_video(
                 chat_id,
-                "https://i.top4top.io/m_37646npju0.mp4",
+                "BAACAgIAAxkBAAIJe2nrzi2lV5uHV4aFr64JDE-Fzv2mAAL4lQACO4phS-8b_ZujIcceOwQ",
                 caption="💳 الحصول على الماستر\n\n📢 " + CHANNEL
             )
         except Exception as e:
