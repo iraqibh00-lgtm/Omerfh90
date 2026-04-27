@@ -68,15 +68,17 @@ active_groups = load_groups()
 DAILY_PHOTO_URL = "https://a.top4top.io/p_3732sxkcf0.png"
 
 BUTTON_KEYS = {
-    "uber_pay":      "💳 طريقة تسديد Uber",
-    "uber_withdraw": "💰 طريقة سحب مستحقات Uber",
-    "uber_careem":   "🔗 ربط كريم في Uber",
-    "uber_master":   "💳 ربط الماستر بتطبيق Uber",
-    "uber_cancel":   "🔄 تعويض إلغاء الرحلة",
-    "uber_block":    "🚫 منع الرحلات الجديدة",
-    "uber_support":  "🆘 دعم Uber داخل التطبيق",
-    "baly_pay":      "💳 طريقة تسديد Baly",
-    "oper_pay":      "💳 طريقة تسديد Oper",
+    "uber_pay":         "💳 طريقة تسديد Uber",
+    "uber_withdraw":    "💰 طريقة سحب مستحقات Uber",
+    "uber_careem":      "🔗 ربط كريم في Uber",
+    "uber_master":      "💳 ربط الماستر بتطبيق Uber",
+    "uber_cancel":      "🔄 تعويض إلغاء الرحلة",
+    "uber_block":       "🚫 منع الرحلات الجديدة",
+    "uber_support":     "🆘 دعم Uber داخل التطبيق",
+    "uber_appointment": "📅 حجز موعد اوبر",
+    "uber_trips":       "📋 معرفة تفاصيل الرحلات",
+    "baly_pay":         "💳 طريقة تسديد Baly",
+    "oper_pay":         "💳 طريقة تسديد Oper",
 }
 
 # ═══════════════════════════════════════
@@ -114,13 +116,15 @@ def load_buttons():
             {"key": "oper_main", "label": "🟡 حول Oper", "type": "video"},
         ],
         "uber": [
-            {"key": "uber_pay",      "label": "💳 طريقة تسديد Uber",        "type": "video"},
-            {"key": "uber_withdraw", "label": "💰 طريقة سحب مستحقات Uber",  "type": "video"},
-            {"key": "uber_careem",   "label": "🔗 ربط كريم في Uber",         "type": "video"},
-            {"key": "uber_master",   "label": "💳 ربط الماستر بتطبيق Uber", "type": "video"},
-            {"key": "uber_cancel",   "label": "🔄 تعويض إلغاء الرحلة",      "type": "video"},
-            {"key": "uber_block",    "label": "🚫 منع الرحلات الجديدة",     "type": "video"},
-            {"key": "uber_support",  "label": "🆘 دعم Uber داخل التطبيق",   "type": "video"},
+            {"key": "uber_pay",         "label": "💳 طريقة تسديد Uber",        "type": "video"},
+            {"key": "uber_withdraw",    "label": "💰 طريقة سحب مستحقات Uber",  "type": "video"},
+            {"key": "uber_careem",      "label": "🔗 ربط كريم في Uber",         "type": "video"},
+            {"key": "uber_master",      "label": "💳 ربط الماستر بتطبيق Uber", "type": "video"},
+            {"key": "uber_cancel",      "label": "🔄 تعويض إلغاء الرحلة",      "type": "video"},
+            {"key": "uber_block",       "label": "🚫 منع الرحلات الجديدة",     "type": "video"},
+            {"key": "uber_support",     "label": "🆘 دعم Uber داخل التطبيق",   "type": "video"},
+            {"key": "uber_appointment", "label": "📅 حجز موعد اوبر",           "type": "video"},
+            {"key": "uber_trips",       "label": "📋 معرفة تفاصيل الرحلات",    "type": "video"},
         ]
     }
 
@@ -159,15 +163,17 @@ for uid in PRE_REPLIED:
 # 🎬 الفيديوهات الثابتة
 # ═══════════════════════════════════════
 FIXED_VIDEOS = {
-    "oper_pay":      "BAACAgIAAxkBAAIDGGmbIPGGhh4Q2OkKCjDHP20p9iweAAKHlwACv-DYSG4MDukpCf0tOgQ",
-    "baly_pay":      "BAACAgIAAxkBAAIDGmmbIRJixuRz2Q8bfgJ9BIDW57_0AAKJlwACv-DYSA-mro42hfb3OgQ",
-    "uber_withdraw": "BAACAgIAAxkBAAIChGmawtpFjG-Y-os3JJia_fcLtxXZAAI_kgACv-DYSDiXe_Ej73KjOgQ",
-    "uber_careem":   "BAACAgIAAxkBAAIC5mmbBndewCwKXr_or9mitgjKlSpDAAL6lQACv-DYSLfZGzJ-cvWpOgQ",
-    "uber_master":   "BAACAgIAAxkBAAIC3GmbATBbMwd9OaRMDd0J05FNlnpjAALkhwACZV_RS5rI8WmK3zJ1OgQ",
-    "uber_support":  "BAACAgIAAxkBAAIC1mmbAAFWjjXaphG0vnstNi3CnfWcTQACgpUAAqtp6EtWakIboxiqbjoE",
-    "uber_block":    "BAACAgIAAxkBAAIC02mbAAE4iYfKQk6pwa6aZX8q3tf3FwAC95wAAhQ7aEimz619q9l_eDoE",
-    "uber_cancel":   "BAACAgIAAxkBAAICjGmaw7FSiQvkdv99yPoujWKfSirWAAJWnQACFDtoSLXKf446_9NnOgQ",
-    "uber_pay":      "BAACAgIAAxkBAAID5mmlkRH-iaBVRCS_kW-R7MSCU_9RAAITjwAC5XsQSVw4Yd0kWt23OgQ",
+    "oper_pay":         "BAACAgIAAxkBAAIDGGmbIPGGhh4Q2OkKCjDHP20p9iweAAKHlwACv-DYSG4MDukpCf0tOgQ",
+    "baly_pay":         "BAACAgIAAxkBAAIDGmmbIRJixuRz2Q8bfgJ9BIDW57_0AAKJlwACv-DYSA-mro42hfb3OgQ",
+    "uber_withdraw":    "BAACAgIAAxkBAAIChGmawtpFjG-Y-os3JJia_fcLtxXZAAI_kgACv-DYSDiXe_Ej73KjOgQ",
+    "uber_careem":      "BAACAgIAAxkBAAIC5mmbBndewCwKXr_or9mitgjKlSpDAAL6lQACv-DYSLfZGzJ-cvWpOgQ",
+    "uber_master":      "BAACAgIAAxkBAAIC3GmbATBbMwd9OaRMDd0J05FNlnpjAALkhwACZV_RS5rI8WmK3zJ1OgQ",
+    "uber_support":     "BAACAgIAAxkBAAIC1mmbAAFWjjXaphG0vnstNi3CnfWcTQACgpUAAqtp6EtWakIboxiqbjoE",
+    "uber_block":       "BAACAgIAAxkBAAIC02mbAAE4iYfKQk6pwa6aZX8q3tf3FwAC95wAAhQ7aEimz619q9l_eDoE",
+    "uber_cancel":      "BAACAgIAAxkBAAICjGmaw7FSiQvkdv99yPoujWKfSirWAAJWnQACFDtoSLXKf446_9NnOgQ",
+    "uber_pay":         "BAACAgIAAxkBAAID5mmlkRH-iaBVRCS_kW-R7MSCU_9RAAITjwAC5XsQSVw4Yd0kWt23OgQ",
+    "uber_appointment": "BAACAgIAAxkBAAIJhmnvG7XbDdID4rqFYEOLQLRV5cdBAAKRmAACbMN4S6NFtPowBL9COwQ",
+    "uber_trips":       "BAACAgIAAxkBAAIJiWnvHCc5cl3738RZDWOFjV6DYuTFAAKVmAACbMN4S2jihbimI3NEOwQ",
 }
 
 for key, file_id in FIXED_VIDEOS.items():
@@ -773,9 +779,7 @@ def handle_private_video(message):
         return
     file_id = message.video.file_id
     pending_video[message.from_user.id] = file_id
-    # ✅ إرسال الـ File ID أولاً قابل للنسخ
     bot.reply_to(message, f"🆔 <b>File ID:</b>\n<code>{file_id}</code>", parse_mode="HTML")
-    # ثم أزرار الربط
     bot.send_message(message.chat.id, "📹 اختر الزر الذي تريد ربطه بهذا الفيديو:",
                      reply_markup=get_assign_buttons())
 
