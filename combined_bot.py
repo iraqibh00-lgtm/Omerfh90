@@ -952,7 +952,7 @@ def handle_video_download_sync(chat_id, reply_to_id, url):
 # معالج رسائل المجموعة
 # ═══════════════════════════════════════
 
-@bot.message_handler(content_types=['sticker', 'animation', 'video_note', 'voice'])
+@bot.message_handler(content_types=['sticker', 'animation', 'video_note'])
 def ignore_media(message):
     return
 
