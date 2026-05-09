@@ -1189,14 +1189,21 @@ def handle_hero_logic(message):
 # 🎙️ نظام تحليل البصمات الصوتية
 # ═══════════════════════════════════════
 
+GROQ_API_KEY = "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"
+
 def transcribe_voice_local(file_path: str) -> str:
-    """تحويل الصوت لنص باستخدام faster-whisper محلياً مجاناً"""
+    """تحويل الصوت لنص باستخدام Groq Whisper مجاناً"""
     try:
-        from faster_whisper import WhisperModel
-        model = WhisperModel("small", device="cpu", compute_type="int8")
-        segments, _ = model.transcribe(file_path, language="ar")
-        text = " ".join([seg.text for seg in segments])
-        return text.strip()
+        from groq import Groq
+        client = Groq(api_key=GROQ_API_KEY)
+        with open(file_path, "rb") as audio_file:
+            transcription = client.audio.transcriptions.create(
+                file=(file_path, audio_file.read()),
+                model="whisper-large-v3",
+                language="ar",
+                response_format="text"
+            )
+        return transcription.strip() if transcription else ""
     except Exception as e:
         print(f"⚠️ خطأ في تحويل الصوت: {e}")
         return ""
