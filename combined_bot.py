@@ -1222,6 +1222,21 @@ def transcribe_voice_local(file_path: str) -> str:
 
 ADMIN_GROUP_ID = -1003746150788
 
+GREETING_WORDS = [
+    'صباح الخير', 'مساء الخير', 'شلونكم', 'شلونك',
+    'يسعد صباحكم', 'يسعد مسائكم', 'يسعد صباحك', 'يسعد مساءك',
+]
+
+def contains_greeting(text: str) -> bool:
+    """يتحقق إذا النص يحتوي على تحية"""
+    if not text:
+        return False
+    text_lower = text.lower().strip()
+    for word in GREETING_WORDS:
+        if word.lower() in text_lower:
+            return True
+    return False
+
 def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
     """تحليل البصمة الصوتية وحذفها إذا كانت مسيئة"""
     try:
@@ -1234,7 +1249,7 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                     bot_instance.send_voice(
                         ADMIN_GROUP_ID,
                         audio,
-                        caption=f"🚨 بصمة مسيئة تم حذفها\n📝 النص: {text}\n👥 من كروب: {chat_id}"
+                        caption=f"🚨 بصمة مسيئة تم حذفها\n📝 النص: {text}\n👥 من كروب: كباتن صقور العراق"
                     )
             except Exception as e:
                 print(f"⚠️ خطأ في إرسال للإدارة: {e}")
@@ -1244,6 +1259,11 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                 print(f"🚫 تم حذف بصمة مسيئة في {chat_id}")
             except Exception as e:
                 print(f"⚠️ خطأ في الحذف: {e}")
+        elif text and contains_greeting(text):
+            try:
+                bot_instance.send_message(chat_id, "❤️", reply_to_message_id=message_id)
+            except Exception as e:
+                print(f"⚠️ خطأ في إرسال القلب: {e}")
     except Exception as e:
         print(f"⚠️ خطأ في تحليل الصوت: {e}")
     finally:
