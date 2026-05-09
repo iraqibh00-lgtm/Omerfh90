@@ -1261,9 +1261,13 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                 print(f"⚠️ خطأ في الحذف: {e}")
         elif text and contains_greeting(text):
             try:
-                bot_instance.send_message(chat_id, "❤️", reply_to_message_id=message_id)
+                bot_instance.set_message_reaction(
+                    chat_id,
+                    message_id,
+                    reaction=[telebot.types.ReactionTypeEmoji('❤️')]
+                )
             except Exception as e:
-                print(f"⚠️ خطأ في إرسال القلب: {e}")
+                print(f"⚠️ خطأ في إرسال الريأكشن: {e}")
     except Exception as e:
         print(f"⚠️ خطأ في تحليل الصوت: {e}")
     finally:
