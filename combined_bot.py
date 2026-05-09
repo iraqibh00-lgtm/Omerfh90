@@ -228,6 +228,30 @@ ADULT_KEYWORDS = [
     'فيديو ساخن', 'صور ساخنة', 'بنات خاص', 'cam girls'
 ]
 
+# ═══════════════════════════════════════
+# 🚫 الكلمات المحظورة في البصمات الصوتية
+# ═══════════════════════════════════════
+
+VOICE_BANNED_WORDS = [
+    'امبعبص', 'كس', 'طيز', 'عير',
+    'ابن القندرة', 'ابن النعال',
+    'انعل ابوكم', 'انعل ابوك',
+    'خره بشرفكم', 'خره بشرفك',
+    'الكحبه', 'كحبه', 'كحبة', 'الكحبة', 'ساقطة',
+    'منيجه', 'منيجة', 'دودكي',
+    'فرخ', 'منيوك', 'تنيج', 'ينيج',
+]
+
+def contains_banned_voice_word(text: str) -> bool:
+    """يتحقق إذا النص يحتوي على كلمة محظورة"""
+    if not text:
+        return False
+    text_lower = text.lower().strip()
+    for word in VOICE_BANNED_WORDS:
+        if word.lower() in text_lower:
+            return True
+    return False
+
 def is_adult_content(text):
     if not text:
         return False
@@ -1159,6 +1183,68 @@ def handle_hero_logic(message):
         threading.Thread(target=send_delayed_voice, args=(chat_id, message.message_id)).start()
         delay = 21600 if word_count <= 2 else 900
         threading.Thread(target=delete_message_after, args=(chat_id, message.message_id, delay)).start()
+
+
+# ═══════════════════════════════════════
+# 🎙️ نظام تحليل البصمات الصوتية
+# ═══════════════════════════════════════
+
+def transcribe_voice_local(file_path: str) -> str:
+    """تحويل الصوت لنص باستخدام faster-whisper محلياً مجاناً"""
+    try:
+        from faster_whisper import WhisperModel
+        model = WhisperModel("small", device="cpu", compute_type="int8")
+        segments, _ = model.transcribe(file_path, language="ar")
+        text = " ".join([seg.text for seg in segments])
+        return text.strip()
+    except Exception as e:
+        print(f"⚠️ خطأ في تحويل الصوت: {e}")
+        return ""
+
+def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
+    """تحليل البصمة الصوتية وحذفها إذا كانت مسيئة"""
+    try:
+        text = transcribe_voice_local(file_path)
+        print(f"📝 نص البصمة: {text}")
+        if text and contains_banned_voice_word(text):
+            try:
+                bot_instance.delete_message(chat_id, message_id)
+                print(f"🚫 تم حذف بصمة مسيئة في {chat_id}")
+            except Exception as e:
+                print(f"⚠️ خطأ في الحذف: {e}")
+    except Exception as e:
+        print(f"⚠️ خطأ في تحليل الصوت: {e}")
+    finally:
+        try:
+            if os.path.exists(file_path):
+                os.remove(file_path)
+        except:
+            pass
+
+@bot.message_handler(
+    func=lambda m: m.chat.type in ['group', 'supergroup'],
+    content_types=['voice']
+)
+def handle_group_voice(message):
+    """معالج البصمات الصوتية في المجموعات"""
+    # الأدمن معفيون
+    if is_admin(message.chat.id, message.from_user.id):
+        return
+    chat_id    = message.chat.id
+    message_id = message.message_id
+    try:
+        file_info = bot.get_file(message.voice.file_id)
+        file_path = f"voice_{chat_id}_{message_id}.ogg"
+        downloaded = bot.download_file(file_info.file_path)
+        with open(file_path, 'wb') as f:
+            f.write(downloaded)
+        threading.Thread(
+            target=analyze_and_delete_voice,
+            args=(bot, chat_id, message_id, file_path),
+            daemon=True
+        ).start()
+    except Exception as e:
+        print(f"⚠️ خطأ في تنزيل البصمة: {e}")
 
 
 # ═══════════════════════════════════════
