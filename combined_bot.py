@@ -1246,9 +1246,6 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
 )
 def handle_group_voice(message):
     """معالج البصمات الصوتية في المجموعات"""
-    # الأدمن معفيون
-    if is_admin(message.chat.id, message.from_user.id):
-        return
     chat_id    = message.chat.id
     message_id = message.message_id
     try:
