@@ -322,17 +322,10 @@ def send_delayed_voice(chat_id, message_id):
             'CQACAgIAAxkBAAIEIWmodiU9smBOQ4lZG7hc5yU785pvAAJVlAACB05JSbPIhdoDGKQlOgQ'
         ]
         chosen_voice = random.choice(voices)
-        bot_info = bot.get_me()
-        markup = telebot.types.InlineKeyboardMarkup()
-        markup.add(telebot.types.InlineKeyboardButton(
-            "🤖 AI الصقور — اضغط للتحدث",
-            url=f"https://t.me/{bot_info.username}?start=hi"
-        ))
         bot.send_voice(
             chat_id, chosen_voice,
             caption=CHANNEL,
             reply_to_message_id=message_id,
-            reply_markup=markup
         )
     except:
         pass
