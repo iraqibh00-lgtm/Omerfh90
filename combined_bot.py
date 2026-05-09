@@ -1220,6 +1220,8 @@ def transcribe_voice_local(file_path: str) -> str:
         print(f"⚠️ خطأ في تحويل الصوت: {e}")
         return ""
 
+ADMIN_GROUP_ID = -1003746150788
+
 def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
     """تحليل البصمة الصوتية وحذفها إذا كانت مسيئة"""
     try:
@@ -1227,6 +1229,17 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
         print(f"📝 نص البصمة: {text}")
         if text and contains_banned_voice_word(text):
             try:
+                # إرسال البصمة لكروب الإدارة أولاً
+                with open(file_path, 'rb') as audio:
+                    bot_instance.send_voice(
+                        ADMIN_GROUP_ID,
+                        audio,
+                        caption=f"🚨 بصمة مسيئة تم حذفها\n📝 النص: {text}\n👥 من كروب: {chat_id}"
+                    )
+            except Exception as e:
+                print(f"⚠️ خطأ في إرسال للإدارة: {e}")
+            try:
+                # حذفها من الكروب العام
                 bot_instance.delete_message(chat_id, message_id)
                 print(f"🚫 تم حذف بصمة مسيئة في {chat_id}")
             except Exception as e:
