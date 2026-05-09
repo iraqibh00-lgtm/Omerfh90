@@ -6,14 +6,30 @@ import random
 import re
 import os
 import json
+import asyncio
+import yt_dlp
 
-# --- بيانات البوت ---
-BOT_TOKEN   = '7655504363:AAEBZmKP7NzaxIvtXQejVj82cRyp5Y52B_A'
-OWNER_ID    = 6488083580
-ALERT_ADMINS = {198027774}  # أدمنية صلاحية التنبيه فقط
-CHANNEL     = 'https://t.me/hawk0000000'
+from telegram import Update, Bot as AsyncBot
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
-# --- القائمة البيضاء ---
+# ═══════════════════════════════════════
+# 🔑 بيانات البوتين
+# ═══════════════════════════════════════
+
+# بوت صقور العراق الرئيسي (telebot)
+BOT_TOKEN    = '7655504363:AAEBZmKP7NzaxIvtXQejVj82cRyp5Y52B_A'
+OWNER_ID     = 6488083580
+ALERT_ADMINS = {198027774}
+CHANNEL      = 'https://t.me/hawk0000000'
+GROUP_LINK   = "https://t.me/FalconsofIraq"
+
+# بوت تحميل الفيديو (python-telegram-bot)
+DOWNLOADER_TOKEN = '8266072398:AAHO8y2Vd-i-3h9MQbx_i2ui2mMl6X9RRcY'
+
+# ═══════════════════════════════════════
+# 📋 القائمة البيضاء للروابط
+# ═══════════════════════════════════════
+
 WHITELIST_LINKS = [
     't.me/hawk0000000',
     'youtube.com',
@@ -111,9 +127,9 @@ def load_buttons():
             return json.load(f)
     return {
         "main": [
-            {"key": "menu_uber", "label": "🚖 حول Uber", "type": "submenu"},
-            {"key": "baly_main", "label": "🟢 حول Baly", "type": "video"},
-            {"key": "oper_main", "label": "🟡 حول Oper", "type": "video"},
+            {"key": "menu_uber",   "label": "🚖 حول Uber",  "type": "submenu"},
+            {"key": "baly_main",   "label": "🟢 حول Baly",  "type": "video"},
+            {"key": "oper_main",   "label": "🟡 حول Oper",  "type": "video"},
         ],
         "uber": [
             {"key": "uber_pay",         "label": "💳 طريقة تسديد Uber",        "type": "video"},
@@ -138,6 +154,7 @@ videos_db     = load_videos()
 # ═══════════════════════════════════════
 # 👥 أعضاء سبق الرد عليهم
 # ═══════════════════════════════════════
+
 PRE_REPLIED = [
     5633215088, 6488083580, 7609125208, 6795035237, 8539562017,
     864870558,  7327508475, 7536362781, 1070865939, 6830552073,
@@ -162,6 +179,7 @@ for uid in PRE_REPLIED:
 # ═══════════════════════════════════════
 # 🎬 الفيديوهات الثابتة
 # ═══════════════════════════════════════
+
 FIXED_VIDEOS = {
     "oper_pay":         "BAACAgIAAxkBAAIDGGmbIPGGhh4Q2OkKCjDHP20p9iweAAKHlwACv-DYSG4MDukpCf0tOgQ",
     "baly_pay":         "BAACAgIAAxkBAAIDGmmbIRJixuRz2Q8bfgJ9BIDW57_0AAKJlwACv-DYSA-mro42hfb3OgQ",
@@ -228,6 +246,18 @@ def is_suspicious_url(text):
         return False
     return not any(link in text.lower() for link in WHITELIST_LINKS)
 
+def is_downloadable_url(text):
+    """تحقق إذا كان الرابط من المنصات المدعومة للتحميل"""
+    if not text:
+        return False
+    download_patterns = [
+        'youtube.com/watch', 'youtu.be/', 'youtube.com/shorts',
+        'tiktok.com/', 'instagram.com/reel', 'instagram.com/p/',
+        'facebook.com/watch', 'fb.watch/', 'twitter.com/', 'x.com/',
+        'twitch.tv/', 'vimeo.com/'
+    ]
+    return any(p in text.lower() for p in download_patterns)
+
 def delete_message_after(chat_id, message_id, delay_seconds):
     time.sleep(delay_seconds)
     try:
@@ -265,10 +295,10 @@ def send_delayed_voice(chat_id, message_id):
 def get_main_menu():
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     markup.add(
-        telebot.types.InlineKeyboardButton("🚖 حول Uber", callback_data="menu_uber"),
-        telebot.types.InlineKeyboardButton("🟢 حول Baly", callback_data="menu_baly"),
-        telebot.types.InlineKeyboardButton("🟡 حول Oper", callback_data="menu_oper"),
-        telebot.types.InlineKeyboardButton("💳 ماستر كارد", callback_data="menu_mastercard"),
+        telebot.types.InlineKeyboardButton("🚖 حول Uber",      callback_data="menu_uber"),
+        telebot.types.InlineKeyboardButton("🟢 حول Baly",      callback_data="menu_baly"),
+        telebot.types.InlineKeyboardButton("🟡 حول Oper",      callback_data="menu_oper"),
+        telebot.types.InlineKeyboardButton("💳 ماستر كارد",    callback_data="menu_mastercard"),
     )
     return markup
 
@@ -284,7 +314,7 @@ def get_baly_menu():
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         telebot.types.InlineKeyboardButton("💳 تسديد Baly", callback_data="btn_baly_pay"),
-        telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data="menu_back"),
+        telebot.types.InlineKeyboardButton("🔙 رجوع",       callback_data="menu_back"),
     )
     return markup
 
@@ -292,7 +322,7 @@ def get_oper_menu():
     markup = telebot.types.InlineKeyboardMarkup(row_width=2)
     markup.add(
         telebot.types.InlineKeyboardButton("💳 تسديد Oper", callback_data="btn_oper_pay"),
-        telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data="menu_back"),
+        telebot.types.InlineKeyboardButton("🔙 رجوع",       callback_data="menu_back"),
     )
     return markup
 
@@ -300,8 +330,8 @@ def get_mastercard_menu():
     markup = telebot.types.InlineKeyboardMarkup(row_width=1)
     markup.add(
         telebot.types.InlineKeyboardButton("🔧 حل مشكلة الماستر كارد", callback_data="mc_fix"),
-        telebot.types.InlineKeyboardButton("💳 الحصول على الماستر", callback_data="mc_get"),
-        telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data="menu_back"),
+        telebot.types.InlineKeyboardButton("💳 الحصول على الماستر",    callback_data="mc_get"),
+        telebot.types.InlineKeyboardButton("🔙 رجوع",                  callback_data="menu_back"),
     )
     return markup
 
@@ -336,7 +366,7 @@ def get_gather_groups_menu():
             f"👥 {name}", callback_data=f"gather_group_{gid}"
         ))
     markup.add(telebot.types.InlineKeyboardButton("📢 إرسال للكل", callback_data="gather_group_all"))
-    markup.add(telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data="adm_back"))
+    markup.add(telebot.types.InlineKeyboardButton("🔙 رجوع",       callback_data="adm_back"))
     return markup
 
 def get_groups_menu():
@@ -628,7 +658,7 @@ def start_command(message):
     if user_id in ALERT_ADMINS:
         markup = telebot.types.InlineKeyboardMarkup(row_width=1)
         markup.add(telebot.types.InlineKeyboardButton("📢 إرسال تنبيه للمجموعات", callback_data="adm_alert"))
-        markup.add(telebot.types.InlineKeyboardButton("📍 تجمع", callback_data="adm_gather"))
+        markup.add(telebot.types.InlineKeyboardButton("📍 تجمع",                   callback_data="adm_gather"))
         bot.send_message(message.chat.id, '📢 لوحة التنبيهات:', reply_markup=markup)
         return
 
@@ -686,9 +716,9 @@ def handle_admin_input(message):
     action  = state['action']
 
     if action == 'rename' and message.content_type == 'text':
-        section    = state['section']
-        key        = state['key']
-        new_label  = message.text.strip()
+        section   = state['section']
+        key       = state['key']
+        new_label = message.text.strip()
         buttons_db = load_buttons()
         for btn in buttons_db.get(section, []):
             if btn['key'] == key:
@@ -715,9 +745,9 @@ def handle_admin_input(message):
         return
 
     if action == 'add_btn_video' and message.content_type == 'video':
-        section    = state['section']
-        key        = state['key']
-        label      = state['label']
+        section   = state['section']
+        key       = state['key']
+        label     = state['label']
         buttons_db = load_buttons()
         if section not in buttons_db:
             buttons_db[section] = []
@@ -758,7 +788,7 @@ def handle_admin_input(message):
         success = 0
         for gid in send_to:
             try:
-                bot.send_photo(gid, file_id, caption="https://t.me/FalconsofIraq")
+                bot.send_photo(gid, file_id, caption=GROUP_LINK)
                 success += 1
             except:
                 pass
@@ -785,18 +815,100 @@ def handle_private_video(message):
 
 
 # ═══════════════════════════════════════
-# خاص: رسائل الأعضاء العاديين → القائمة فقط
+# خاص: رسائل الأعضاء العاديين
 # ═══════════════════════════════════════
 
 @bot.message_handler(content_types=['text'],
                      func=lambda m: m.chat.type == 'private' and m.from_user.id != OWNER_ID
                                     and m.from_user.id not in ALERT_ADMINS)
 def handle_private_message(message):
+    text = message.text.strip() if message.text else ""
+
+    # ── تحميل فيديو إذا أرسل رابط مدعوم ──
+    if is_downloadable_url(text):
+        threading.Thread(
+            target=handle_video_download_sync,
+            args=(message.chat.id, message.message_id, text)
+        ).start()
+        return
+
     bot.send_message(
         message.chat.id,
         "👇 اختر ما تريد معرفته:",
         reply_markup=get_main_menu()
     )
+
+
+# ═══════════════════════════════════════
+# 🎬 تحميل الفيديو — منطق مشترك (sync)
+# ═══════════════════════════════════════
+
+def handle_video_download_sync(chat_id, reply_to_id, url):
+    """تحميل الفيديو وإرساله عبر بوت صقور الرئيسي (telebot)"""
+
+    # تحويل Shorts
+    if 'shorts/' in url:
+        url = url.replace('shorts/', 'watch?v=')
+
+    try:
+        status_msg = bot.send_message(chat_id, "الصقور تحملك الفيديو انتظر يابطل 🦅🔥",
+                                      reply_to_message_id=reply_to_id)
+    except:
+        return
+
+    filename_base = f"video_{chat_id}_{int(time.time())}"
+
+    ydl_opts = {
+        'format': 'best',
+        'outtmpl': f'{filename_base}.%(ext)s',
+        'quiet': True,
+        'no_warnings': True,
+        'noplaylist': True,
+        'user_agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/121.0.0.0 Safari/537.36'
+        ),
+        'nocheckcertificate': True,
+        'geo_bypass': True,
+        'add_header': {
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.google.com/'
+        }
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info     = ydl.extract_info(url, download=True)
+            filename = ydl.prepare_filename(info)
+
+        with open(filename, 'rb') as video_file:
+            bot.send_video(
+                chat_id,
+                video_file,
+                caption=GROUP_LINK,
+                supports_streaming=True
+            )
+
+        if os.path.exists(filename):
+            os.remove(filename)
+
+        try: bot.delete_message(chat_id, status_msg.message_id)
+        except: pass
+
+    except Exception as e:
+        print(f"Download error: {e}")
+        try:
+            bot.edit_message_text(
+                "⚠️ حدث خطأ أو الرابط غير مدعوم.\nتأكد من جودة الإنترنت.",
+                chat_id, status_msg.message_id
+            )
+        except: pass
+        # تنظيف الملفات المؤقتة
+        for f in os.listdir('.'):
+            if f.startswith(filename_base):
+                try: os.remove(f)
+                except: pass
 
 
 # ═══════════════════════════════════════
@@ -820,7 +932,7 @@ def handle_hero_logic(message):
     if is_group:
         save_group(chat_id)
 
-    # ⭐ نقطة — عرض القائمة
+    # نقطة — عرض القائمة
     if is_group and text.strip() == '.':
         try: bot.delete_message(chat_id, message.message_id)
         except: pass
@@ -838,7 +950,7 @@ def handle_hero_logic(message):
             bot.send_message(chat_id, "📋 اختر ما تريد معرفته:", reply_markup=get_main_menu())
         return
 
-    # ⭐ أمر # — نظام الخلل الفني (للأدمن فقط)
+    # أمر # — نظام الخلل الفني (للأدمن فقط)
     if is_group and text.strip() == '#' and message.reply_to_message and is_admin(chat_id, user_id):
         target_msg_id = message.reply_to_message.message_id
         session_key   = f"{chat_id}_{target_msg_id}"
@@ -855,7 +967,7 @@ def handle_hero_logic(message):
         ).start()
         return
 
-    # ⭐ رقم 1 — إرسال الصورة الإعلانية (للأدمن فقط)
+    # رقم 1 — إرسال الصورة الإعلانية (للأدمن فقط)
     if is_group and text.strip() == '1' and is_admin(chat_id, user_id):
         try: bot.delete_message(chat_id, message.message_id)
         except: pass
@@ -881,7 +993,7 @@ def handle_hero_logic(message):
                          parse_mode="Markdown", disable_web_page_preview=True)
         return
 
-    # ⭐ أمر تقيد
+    # أمر تقيد
     if is_group and text.strip() == 'تقيد' and message.reply_to_message and is_admin(chat_id, user_id):
         target_id = message.reply_to_message.from_user.id
         try: bot.delete_message(chat_id, message.message_id)
@@ -894,7 +1006,7 @@ def handle_hero_logic(message):
         except: pass
         return
 
-    # ⭐ أمر فتح
+    # أمر فتح
     if is_group and text.strip() == 'فتح' and message.reply_to_message and is_admin(chat_id, user_id):
         target_id = message.reply_to_message.from_user.id
         try: bot.delete_message(chat_id, message.message_id)
@@ -941,7 +1053,7 @@ def handle_hero_logic(message):
         return
 
     # حذف المحتوى المحول من قنوات أخرى
-    _fwd_chat = message.forward_from_chat
+    _fwd_chat   = message.forward_from_chat
     _fwd_origin = getattr(message, 'forward_origin', None)
     _is_channel_fwd = (
         (_fwd_chat and _fwd_chat.type == 'channel' and _fwd_chat.username != 'hawk0000000') or
@@ -1096,7 +1208,100 @@ def handle_glitch_fixed(call):
 
 
 # ═══════════════════════════════════════
-# تشغيل البوت
+# 🎬 بوت التحميل المستقل (python-telegram-bot)
+# يعمل على TOKEN منفصل في thread منفصل
+# ═══════════════════════════════════════
+
+async def downloader_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    welcome_text = (
+        "اهلا وسهلا بكم بوت صقور العراق لتحميل الفيديوهات\n"
+        "أمن ✅\n"
+        "سريع ✅\n"
+        "بدون اعلانات ✅\n\n"
+        "فقط انسخ رابط الفيديو والصقه هنا 👇\n\n"
+        "مجموعتنا على تلغرام حياكم الله " + GROUP_LINK
+    )
+    await update.message.reply_text(welcome_text)
+
+async def downloader_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    url     = update.message.text.strip()
+    chat_id = update.message.chat_id
+
+    if not is_downloadable_url(url):
+        await update.message.reply_text(
+            "⚠️ الرابط غير مدعوم.\nأرسل رابطاً من YouTube أو TikTok أو Instagram أو Facebook."
+        )
+        return
+
+    if 'shorts/' in url:
+        url = url.replace('shorts/', 'watch?v=')
+
+    status_msg = await update.message.reply_text("الصقور تحملك الفيديو انتظر يابطل 🦅🔥")
+
+    filename_base = f"dl_{chat_id}_{int(time.time())}"
+
+    ydl_opts = {
+        'format': 'best',
+        'outtmpl': f'{filename_base}.%(ext)s',
+        'quiet': True,
+        'no_warnings': True,
+        'noplaylist': True,
+        'user_agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/121.0.0.0 Safari/537.36'
+        ),
+        'nocheckcertificate': True,
+        'geo_bypass': True,
+        'add_header': {
+            'Accept-Language': 'en-US,en;q=0.9',
+            'Referer': 'https://www.google.com/'
+        }
+    }
+
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            info     = await asyncio.to_thread(ydl.extract_info, url, download=True)
+            filename = ydl.prepare_filename(info)
+
+        with open(filename, 'rb') as video:
+            await context.bot.send_video(
+                chat_id=chat_id,
+                video=video,
+                caption=GROUP_LINK,
+                supports_streaming=True
+            )
+
+        if os.path.exists(filename):
+            os.remove(filename)
+        await status_msg.delete()
+
+    except Exception as e:
+        print(f"Downloader error: {e}")
+        await status_msg.edit_text("⚠️ حدث خطأ أو الرابط غير مدعوم.\nتأكد من جودة الإنترنت.")
+        for f in os.listdir('.'):
+            if f.startswith(filename_base):
+                try: os.remove(f)
+                except: pass
+
+def run_downloader_bot():
+    """يشغّل بوت التحميل في event loop مستقل"""
+    application = (
+        Application.builder()
+        .token(DOWNLOADER_TOKEN)
+        .connect_timeout(40)
+        .read_timeout(40)
+        .write_timeout(40)
+        .build()
+    )
+    application.add_handler(CommandHandler("start", downloader_start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, downloader_download))
+    print("✅ بوت التحميل يعمل...")
+    application.run_polling(drop_pending_updates=True)
+
+
+# ═══════════════════════════════════════
+# تشغيل المشروع
 # ═══════════════════════════════════════
 
 def resolve_default_groups():
@@ -1110,8 +1315,14 @@ def resolve_default_groups():
             print(f"⚠️ تعذر جلب {username}: {e}")
 
 if __name__ == "__main__":
-    print("✅ البوت يعمل...")
+    print("✅ البوت الرئيسي يعمل...")
     resolve_default_groups()
+
+    # تشغيل بوت التحميل في thread منفصل
+    downloader_thread = threading.Thread(target=run_downloader_bot, daemon=True)
+    downloader_thread.start()
+
+    # تشغيل البوت الرئيسي في الـ main thread
     while True:
         try:
             bot.delete_webhook(drop_pending_updates=True)
