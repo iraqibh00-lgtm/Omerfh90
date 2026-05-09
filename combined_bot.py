@@ -6,7 +6,11 @@ import random
 import re
 import os
 import json
+import asyncio
 import yt_dlp
+
+from telegram import Update, Bot as AsyncBot
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, ContextTypes
 
 # ═══════════════════════════════════════
 # 🔑 بيانات البوتين
@@ -1204,14 +1208,11 @@ def handle_glitch_fixed(call):
 
 
 # ═══════════════════════════════════════
-# 🎬 بوت التحميل المستقل (telebot)
+# 🎬 بوت التحميل المستقل (python-telegram-bot)
 # يعمل على TOKEN منفصل في thread منفصل
 # ═══════════════════════════════════════
 
-dl_bot = telebot.TeleBot(DOWNLOADER_TOKEN)
-
-@dl_bot.message_handler(commands=['start'])
-def dl_start(message):
+async def downloader_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         "اهلا وسهلا بكم بوت صقور العراق لتحميل الفيديوهات\n"
         "أمن ✅\n"
@@ -1220,18 +1221,23 @@ def dl_start(message):
         "فقط انسخ رابط الفيديو والصقه هنا 👇\n\n"
         "مجموعتنا على تلغرام حياكم الله " + GROUP_LINK
     )
-    dl_bot.reply_to(message, welcome_text)
+    await update.message.reply_text(welcome_text)
 
-@dl_bot.message_handler(func=lambda m: m.text and is_downloadable_url(m.text.strip()))
-def dl_download(message):
-    url       = message.text.strip()
-    chat_id   = message.chat.id
-    msg_id    = message.message_id
+async def downloader_download(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    url     = update.message.text.strip()
+    chat_id = update.message.chat_id
+
+    if not is_downloadable_url(url):
+        await update.message.reply_text(
+            "⚠️ الرابط غير مدعوم.\nأرسل رابطاً من YouTube أو TikTok أو Instagram أو Facebook."
+        )
+        return
 
     if 'shorts/' in url:
         url = url.replace('shorts/', 'watch?v=')
 
-    status_msg = dl_bot.reply_to(message, "الصقور تحملك الفيديو انتظر يابطل 🦅🔥")
+    status_msg = await update.message.reply_text("الصقور تحملك الفيديو انتظر يابطل 🦅🔥")
+
     filename_base = f"dl_{chat_id}_{int(time.time())}"
 
     ydl_opts = {
@@ -1255,51 +1261,43 @@ def dl_download(message):
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info     = ydl.extract_info(url, download=True)
+            info     = await asyncio.to_thread(ydl.extract_info, url, download=True)
             filename = ydl.prepare_filename(info)
 
         with open(filename, 'rb') as video:
-            dl_bot.send_video(
-                chat_id,
-                video,
+            await context.bot.send_video(
+                chat_id=chat_id,
+                video=video,
                 caption=GROUP_LINK,
                 supports_streaming=True
             )
 
         if os.path.exists(filename):
             os.remove(filename)
-        try: dl_bot.delete_message(chat_id, status_msg.message_id)
-        except: pass
+        await status_msg.delete()
 
     except Exception as e:
         print(f"Downloader error: {e}")
-        try:
-            dl_bot.edit_message_text(
-                "⚠️ حدث خطأ أو الرابط غير مدعوم.\nتأكد من جودة الإنترنت.",
-                chat_id, status_msg.message_id
-            )
-        except: pass
+        await status_msg.edit_text("⚠️ حدث خطأ أو الرابط غير مدعوم.\nتأكد من جودة الإنترنت.")
         for f in os.listdir('.'):
             if f.startswith(filename_base):
                 try: os.remove(f)
                 except: pass
 
-@dl_bot.message_handler(func=lambda m: True)
-def dl_unknown(message):
-    dl_bot.reply_to(
-        message,
-        "⚠️ الرابط غير مدعوم.\nأرسل رابطاً من YouTube أو TikTok أو Instagram أو Facebook."
-    )
-
 def run_downloader_bot():
+    """يشغّل بوت التحميل في event loop مستقل"""
+    application = (
+        Application.builder()
+        .token(DOWNLOADER_TOKEN)
+        .connect_timeout(40)
+        .read_timeout(40)
+        .write_timeout(40)
+        .build()
+    )
+    application.add_handler(CommandHandler("start", downloader_start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, downloader_download))
     print("✅ بوت التحميل يعمل...")
-    while True:
-        try:
-            dl_bot.delete_webhook(drop_pending_updates=True)
-            dl_bot.infinity_polling(timeout=20, interval=2)
-        except Exception as e:
-            print(f"⚠️ خطأ بوت التحميل: {e}")
-            time.sleep(10)
+    application.run_polling(drop_pending_updates=True)
 
 
 # ═══════════════════════════════════════
