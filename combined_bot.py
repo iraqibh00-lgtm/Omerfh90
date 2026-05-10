@@ -250,20 +250,23 @@ VOICE_BANNED_WORDS = [
     'بنت الكلب', 'بنت النعال', 'بنت الزمال',
     'ابن الزمال', 'ابن الخره', 'ابن القندره',
     'سني', 'شيعي', 'شيعة', 'شيعه', 'سنة',
-    'بربوك', 'ابن الحمار', 'الشيعة', 'السنه',
+    'بربوك', 'ابن الحمار', 'الشيعة',
     'الشيعه', 'السنة', 'كواد',
 ]
 
+# كلمات آمنة تحتوي على جذر محظور لكنها كلمات عادية
+_WORD_WHITELIST = {
+    'كس': ['تكسي', 'التكسي', 'تاكسي', 'التاكسي', 'ماكسي', 'باكستاني', 'باكستان'],
+}
+
+def _bare_word_present(word: str, text_lower: str) -> bool:
+    """يتحقق من وجود الكلمة كوحدة مستقلة"""
+    pattern = r'(?<![^\W\d_\u0600-\u06FF])' + re.escape(word) + r'(?![^\W\d_\u0600-\u06FF])'
+    return bool(re.search(pattern, text_lower, re.IGNORECASE))
+
 def _is_word_match(word: str, text_lower: str) -> bool:
-    """
-    يتحقق إذا الكلمة المحظورة موجودة كـكلمة مستقلة في النص.
-    مع استثناء الكلمات التي تحتوي على الجذر لكنها كلمات عادية (مثل: تكسي، باكستاني...).
-    """
-    WHITELIST_WORDS = {
-        'كس': ['تكسي', 'التكسي', 'تاكسي', 'التاكسي', 'الكسي', 'باكستاني', 'باكستان', 'ماكسي'],
-        'طيز': [],
-    }
-    whitelist = WHITELIST_WORDS.get(word.lower(), [])
+    """يتحقق من الكلمة المحظورة مع تجاهل الكلمات الآمنة مثل تكسي"""
+    whitelist = _WORD_WHITELIST.get(word.lower(), [])
     for safe_word in whitelist:
         pattern_safe = r'(?<!\w)' + re.escape(safe_word.lower()) + r'(?!\w)'
         if re.search(pattern_safe, text_lower):
@@ -272,13 +275,8 @@ def _is_word_match(word: str, text_lower: str) -> bool:
                 return False
     return _bare_word_present(word.lower(), text_lower)
 
-def _bare_word_present(word: str, text_lower: str) -> bool:
-    """يتحقق من وجود الكلمة كوحدة مستقلة (بحدود الكلمة العربية والإنجليزية)"""
-    pattern = r'(?<![^\W\d_\u0600-\u06FF])' + re.escape(word) + r'(?![^\W\d_\u0600-\u06FF])'
-    return bool(re.search(pattern, text_lower, re.IGNORECASE))
-
 def contains_banned_voice_word(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على كلمة محظورة — مطابقة كلمة مستقلة فقط"""
+    """يتحقق إذا النص يحتوي على كلمة محظورة — مطابقة كلمة مستقلة مع تجاهل تكسي"""
     if not text:
         return False
     text_lower = text.lower().strip()
@@ -288,7 +286,7 @@ def contains_banned_voice_word(text: str) -> bool:
     return False
 
 def get_found_banned_word(text: str) -> str:
-    """يرجع الكلمة المحظورة الموجودة في النص — مطابقة كلمة مستقلة فقط"""
+    """يرجع الكلمة المحظورة الموجودة في النص — مطابقة كلمة مستقلة مع تجاهل تكسي"""
     if not text:
         return ""
     text_lower = text.lower().strip()
@@ -1340,7 +1338,6 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
             except Exception as e:
                 print(f"⚠️ خطأ في إرسال فيديو سحب المستحقات: {e}")
         elif text and contains_greeting(text):
-            # ضع قلب أحمر على البصمة
             try:
                 bot_instance.set_message_reaction(
                     chat_id,
@@ -1349,22 +1346,6 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                 )
             except Exception as e:
                 print(f"⚠️ خطأ في إرسال الريأكشن: {e}")
-            # أرسل رد صوتي طبيعي
-            try:
-                voices = [
-                    'CQACAgIAAxkBAAID62mobbzOQ1o4S4KrKF-xw3vNOSoyAALTkwACB05JSaaWNgXn9gqbOgQ',
-                    'CQACAgIAAxkBAAIEIWmodiU9smBOQ4lZG7hc5yU785pvAAJVlAACB05JSbPIhdoDGKQlOgQ'
-                ]
-                import random as _random
-                chosen_voice = _random.choice(voices)
-                bot_instance.send_voice(
-                    chat_id,
-                    chosen_voice,
-                    caption=CHANNEL,
-                    reply_to_message_id=message_id
-                )
-            except Exception as e:
-                print(f"⚠️ خطأ في إرسال الرد الصوتي على التحية: {e}")
         else:
             banned_word = get_found_banned_word(text)
             if banned_word:
