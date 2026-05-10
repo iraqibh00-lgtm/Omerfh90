@@ -1700,7 +1700,6 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                             caption=(
                                 f"🚨 بصمة مسيئة تم حذفها\n"
                                 f"🔴 الكلمة: {banned_word}\n"
-                                f"📝 النص: {combined_text}\n"
                                 f"👥 كباتن صقور العراق"
                             )
                         )
