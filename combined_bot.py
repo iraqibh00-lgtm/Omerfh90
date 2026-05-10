@@ -1240,6 +1240,8 @@ def contains_uber_pay_question(text: str) -> bool:
         if phrase.lower() in text_lower:
             return True
     return False
+
+def contains_greeting(text: str) -> bool:
     """يتحقق إذا النص يحتوي على تحية"""
     if not text:
         return False
