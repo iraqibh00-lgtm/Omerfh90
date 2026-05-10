@@ -969,8 +969,9 @@ def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
 
     filename_base = f"video_{chat_id}_{int(time.time())}"
 
-    # ── خيارات yt_dlp الأساسية ──
+    # ── خيارات yt_dlp — نفس إعدادات البوت الأصلي الذي يعمل ──
     ydl_opts = {
+        'format': 'best',
         'outtmpl': f'{filename_base}.%(ext)s',
         'quiet': True,
         'no_warnings': True,
@@ -979,72 +980,16 @@ def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
         'geo_bypass': True,
         'socket_timeout': 30,
         'retries': 5,
-        'fragment_retries': 5,
+        'user_agent': (
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+            'AppleWebKit/537.36 (KHTML, like Gecko) '
+            'Chrome/121.0.0.0 Safari/537.36'
+        ),
         'http_headers': {
-            'User-Agent': (
-                'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) '
-                'AppleWebKit/605.1.15 (KHTML, like Gecko) '
-                'Version/17.0 Mobile/15E148 Safari/604.1'
-            ),
             'Accept-Language': 'en-US,en;q=0.9',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+            'Referer': 'https://www.google.com/',
         },
     }
-
-    # ── إعدادات خاصة بكل منصة ──
-    if 'instagram.com' in url:
-        ydl_opts['format'] = 'best[filesize<50M]/best'
-        ydl_opts['http_headers']['Referer'] = 'https://www.instagram.com/'
-        ydl_opts['extractor_args'] = {'instagram': {'username': [], 'password': []}}
-
-    elif 'tiktok.com' in url or 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
-        ydl_opts['format'] = 'best[filesize<50M]/best'
-        ydl_opts['http_headers'] = {
-            'User-Agent': (
-                'com.zhiliaoapp.musically/2022600030 '
-                '(Linux; U; Android 10; en_US; Pixel 4; '
-                'Build/QQ3A.200805.001; Cronet/58.0.2991.0)'
-            ),
-            'Referer': 'https://www.tiktok.com/',
-        }
-        ydl_opts['extractor_args'] = {
-            'tiktok': {'webpage_download': ['1'], 'api_hostname': ['api22-normal-c-useast2a.tiktokv.com']}
-        }
-
-    elif 'facebook.com' in url or 'fb.watch' in url or 'fb.com' in url:
-        ydl_opts['format'] = 'best[filesize<50M]/best'
-        ydl_opts['http_headers']['Referer'] = 'https://www.facebook.com/'
-
-    elif 'youtube.com' in url or 'youtu.be' in url:
-        # YouTube — استخدام إعدادات android لتجاوز القيود
-        ydl_opts['format'] = (
-            'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]'
-            '/best[ext=mp4][height<=720]'
-            '/best[height<=720]'
-            '/best'
-        )
-        ydl_opts['merge_output_format'] = 'mp4'
-        ydl_opts['extractor_args'] = {
-            'youtube': {
-                'player_client': ['android', 'web'],
-                'player_skip': ['webpage', 'configs'],
-            }
-        }
-        ydl_opts['http_headers'] = {
-            'User-Agent': (
-                'com.google.android.youtube/19.09.37 '
-                '(Linux; U; Android 11) gzip'
-            ),
-        }
-
-    else:
-        # بقية المنصات
-        ydl_opts['format'] = (
-            'best[ext=mp4][height<=720]'
-            '/best[height<=720]'
-            '/best'
-        )
-        ydl_opts['merge_output_format'] = 'mp4'
 
     downloaded_file = None
 
