@@ -6,6 +6,7 @@ import random
 import re
 import os
 import json
+import subprocess
 try:
     import yt_dlp
     YT_DLP_AVAILABLE = True
@@ -282,10 +283,8 @@ VOICE_BANNED_WORDS = [
 _WORD_WHITELIST = {
     'كس':  ['تكسي', 'التكسي', 'تاكسي', 'التاكسي', 'ماكسي', 'باكستاني', 'باكستان', 'بلكسن', 'بلك سن', 'بلكسنن'],
     'كلب': ['جلب', 'الجلب', 'يجلب', 'جلبت', 'جلبوا'],
-    # زمال: محظورة فقط في تركيب "ابن/بنت الزمال"
     'ابن الزمال':  ['زمال', 'الزمال', 'زماله', 'الزماله', 'زمالة', 'الزمالة'],
     'بنت الزمال': ['زمال', 'الزمال', 'زماله', 'الزماله', 'زمالة', 'الزمالة'],
-    # مطي: كلمة عادية
     'مطي': ['مطي', 'المطي', 'مطية', 'المطية', 'مطيه', 'المطيه'],
 }
 
@@ -294,26 +293,19 @@ _GLOBAL_SAFE_WORDS = {
     'سنه', 'سنة', 'سنا', 'سنتين', 'سنوات', 'سنين',
     'تكسي', 'التكسي', 'تاكسي', 'التاكسي',
     'جلب', 'الجلب', 'يجلب', 'جلبت', 'جلبوا',
-    # زمال ومطي — كلمات عادية لا تُحذف
     'زمال', 'الزمال', 'زماله', 'الزماله', 'زمالة', 'الزمالة',
     'مطي', 'المطي', 'مطية', 'المطية', 'مطيه', 'المطيه',
 }
 
 def _bare_word_present(word: str, text_lower: str) -> bool:
-    """يتحقق من وجود الكلمة — يجرب حدود الكلمة أولاً ثم البحث المباشر"""
-    # طريقة 1: مطابقة كحدود كلمة مستقلة
     pattern = r'(?<![^\W\d_\u0600-\u06FF])' + re.escape(word) + r'(?![^\W\d_\u0600-\u06FF])'
     if bool(re.search(pattern, text_lower, re.IGNORECASE)):
         return True
-    # طريقة 2: بحث مباشر — للنصوص الطويلة التي لا تحتوي على فواصل واضحة
     return word in text_lower
 
 def _is_word_match(word: str, text_lower: str) -> bool:
-    """يتحقق من الكلمة المحظورة مع تجاهل الكلمات الآمنة"""
-    # إذا الكلمة المحظورة نفسها موجودة في القائمة الآمنة — تجاهل
     if word.lower() in _GLOBAL_SAFE_WORDS:
         return False
-    # إزالة الكلمات الآمنة من النص قبل الفحص
     cleaned = text_lower
     all_safe = list(_GLOBAL_SAFE_WORDS) + _WORD_WHITELIST.get(word.lower(), [])
     for safe_word in all_safe:
@@ -322,7 +314,6 @@ def _is_word_match(word: str, text_lower: str) -> bool:
     return _bare_word_present(word.lower(), cleaned)
 
 def contains_banned_voice_word(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على كلمة محظورة — مطابقة كلمة مستقلة مع تجاهل تكسي"""
     if not text:
         return False
     text_lower = text.lower().strip()
@@ -332,7 +323,6 @@ def contains_banned_voice_word(text: str) -> bool:
     return False
 
 def get_found_banned_word(text: str) -> str:
-    """يرجع الكلمة المحظورة الموجودة في النص — مطابقة كلمة مستقلة مع تجاهل تكسي"""
     if not text:
         return ""
     text_lower = text.lower().strip()
@@ -359,30 +349,21 @@ def is_suspicious_url(text):
     return not any(link in text.lower() for link in WHITELIST_LINKS)
 
 def is_downloadable_url(text):
-    """تحقق إذا كان الرابط من المنصات المدعومة للتحميل"""
     if not text:
         return False
     download_patterns = [
-        # YouTube
         'youtube.com/watch', 'youtu.be/', 'youtube.com/shorts',
         'youtube.com/live', 'youtube.com/embed',
-        # TikTok
         'tiktok.com/', 'vm.tiktok.com/', 'vt.tiktok.com/',
-        # Instagram
         'instagram.com/reel', 'instagram.com/reels',
         'instagram.com/p/', 'instagram.com/tv/',
         'instagram.com/stories/',
-        # Facebook
         'facebook.com/watch', 'facebook.com/share/',
         'facebook.com/videos/', 'facebook.com/reel',
         'fb.watch/', 'fb.com/',
-        # Twitter / X
         'twitter.com/', 'x.com/',
-        # Twitch & Vimeo
         'twitch.tv/', 'vimeo.com/',
-        # Dailymotion
         'dailymotion.com/video', 'dai.ly/',
-        # Snapchat
         'snapchat.com/spotlight',
     ]
     return any(p in text.lower() for p in download_patterns)
@@ -946,7 +927,6 @@ def handle_private_video(message):
 def handle_private_message(message):
     text = message.text.strip() if message.text else ""
 
-    # ── تحميل فيديو إذا أرسل رابط مدعوم ──
     if is_downloadable_url(text):
         threading.Thread(
             target=handle_video_download_sync,
@@ -966,9 +946,6 @@ def handle_private_message(message):
 # ═══════════════════════════════════════
 
 def handle_video_download_sync(chat_id, reply_to_id, url):
-    """تحميل الفيديو وإرساله عبر بوت صقور الرئيسي (telebot)"""
-
-    # تحويل Shorts
     if 'shorts/' in url:
         url = url.replace('shorts/', 'watch?v=')
 
@@ -1026,7 +1003,6 @@ def handle_video_download_sync(chat_id, reply_to_id, url):
                 chat_id, status_msg.message_id
             )
         except: pass
-        # تنظيف الملفات المؤقتة
         for f in os.listdir('.'):
             if f.startswith(filename_base):
                 try: os.remove(f)
@@ -1035,11 +1011,10 @@ def handle_video_download_sync(chat_id, reply_to_id, url):
 
 # ═══════════════════════════════════════
 # معالج رسائل المجموعة
-# عداد الصور الإباحية لكل مستخدم {user_id: count}
+# عداد الصور الإباحية لكل مستخدم
 nsfw_violations = {}
 
 def check_and_delete_nsfw(chat_id, message_id, user_id, file_id):
-    """فحص الصورة عبر Sightengine وحذفها إذا كانت إباحية"""
     try:
         file_info = bot.get_file(file_id)
         file_url  = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
@@ -1062,14 +1037,11 @@ def check_and_delete_nsfw(chat_id, message_id, user_id, file_id):
         )
         print(f"🔞 فحص صورة — نتيجة: {score:.2f}")
         if score >= 0.5:
-            # حذف الصورة دائماً
             try: bot.delete_message(chat_id, message_id)
             except: pass
-            # زيادة العداد
             nsfw_violations[user_id] = nsfw_violations.get(user_id, 0) + 1
             count = nsfw_violations[user_id]
             print(f"🚫 صورة إباحية — المستخدم {user_id} — المرة {count}")
-            # تقييد فقط بعد 3 مرات
             if count >= 3:
                 try:
                     bot.restrict_chat_member(
@@ -1081,7 +1053,7 @@ def check_and_delete_nsfw(chat_id, message_id, user_id, file_id):
                             can_add_web_page_previews=False
                         )
                     )
-                    nsfw_violations[user_id] = 0  # إعادة العداد
+                    nsfw_violations[user_id] = 0
                     print(f"🔒 تم تقييد المستخدم {user_id} بعد 3 مخالفات")
                 except: pass
     except Exception as e:
@@ -1106,7 +1078,6 @@ def handle_hero_logic(message):
     if is_group:
         save_group(chat_id)
 
-    # نقطة — عرض القائمة
     if is_group and text.strip() == '.':
         try: bot.delete_message(chat_id, message.message_id)
         except: pass
@@ -1124,7 +1095,6 @@ def handle_hero_logic(message):
             bot.send_message(chat_id, "📋 اختر ما تريد معرفته:", reply_markup=get_main_menu())
         return
 
-    # أمر # — نظام الخلل الفني (للأدمن فقط)
     if is_group and text.strip() == '#' and message.reply_to_message and is_admin(chat_id, user_id):
         target_msg_id = message.reply_to_message.message_id
         session_key   = f"{chat_id}_{target_msg_id}"
@@ -1141,7 +1111,6 @@ def handle_hero_logic(message):
         ).start()
         return
 
-    # رقم 1 — إرسال الصورة الإعلانية (للأدمن فقط)
     if is_group and text.strip() == '1' and is_admin(chat_id, user_id):
         try: bot.delete_message(chat_id, message.message_id)
         except: pass
@@ -1157,7 +1126,6 @@ def handle_hero_logic(message):
             pass
         return
 
-    # كلمة admin من الأونر
     if text.strip().lower() == 'admin' and user_id == OWNER_ID:
         try: bot.delete_message(chat_id, message.message_id)
         except: pass
@@ -1167,7 +1135,6 @@ def handle_hero_logic(message):
                          parse_mode="Markdown", disable_web_page_preview=True)
         return
 
-    # أمر تقيد
     if is_group and text.strip() == 'تقيد' and message.reply_to_message and is_admin(chat_id, user_id):
         target_id = message.reply_to_message.from_user.id
         try: bot.delete_message(chat_id, message.message_id)
@@ -1180,7 +1147,6 @@ def handle_hero_logic(message):
         except: pass
         return
 
-    # أمر فتح
     if is_group and text.strip() == 'فتح' and message.reply_to_message and is_admin(chat_id, user_id):
         target_id = message.reply_to_message.from_user.id
         try: bot.delete_message(chat_id, message.message_id)
@@ -1193,7 +1159,6 @@ def handle_hero_logic(message):
         except: pass
         return
 
-    # حصانة القناة والروابط البيضاء
     text_has_whitelist = any(link in text.lower() for link in WHITELIST_LINKS)
     entity_urls = []
     all_entities = (message.entities or []) + (message.caption_entities or [])
@@ -1214,7 +1179,6 @@ def handle_hero_logic(message):
     if any(e.type == 'text_mention' for e in _all_ents):
         return
 
-    # منطق التاك @
     if '@' in text:
         if 'proxytop' in text.lower() or 'mtproto' in text.lower() or 'proxy' in text.lower():
             return
@@ -1226,7 +1190,6 @@ def handle_hero_logic(message):
     if message.content_type == 'text' and is_emoji_only(text):
         return
 
-    # حذف المحتوى المحول من قنوات أخرى
     _fwd_chat   = message.forward_from_chat
     _fwd_origin = getattr(message, 'forward_origin', None)
     _is_channel_fwd = (
@@ -1245,7 +1208,6 @@ def handle_hero_logic(message):
     if is_admin(chat_id, user_id):
         return
 
-    # 🚫 محتوى إباحي → حذف + تقييد فوري
     if is_adult_content(text):
         try: bot.delete_message(chat_id, message.message_id)
         except: pass
@@ -1257,7 +1219,6 @@ def handle_hero_logic(message):
         except: pass
         return
 
-    # 🚫 رابط مشبوه → حذف فوري
     if is_suspicious_url(text):
         try: bot.delete_message(chat_id, message.message_id)
         except: pass
@@ -1273,7 +1234,6 @@ def handle_hero_logic(message):
             except: pass
         return
 
-    # 🚫 بوت سبام → حذف + تقييد فوري
     bot_username = bot.get_me().username
     WHITELISTED_BOTS2 = [bot_username.lower(), 'iiqqsk_bot']
     bot_mentioned2 = any(f'@{b}' in text.lower() or f't.me/{b}' in text.lower() for b in WHITELISTED_BOTS2)
@@ -1289,9 +1249,7 @@ def handle_hero_logic(message):
         except: pass
         return
 
-    # صور وفيديوهات
     if message.content_type in ['photo', 'video']:
-        # 🔞 فحص الصور الإباحية أولاً
         if message.content_type == 'photo':
             threading.Thread(
                 target=check_and_delete_nsfw,
@@ -1310,7 +1268,6 @@ def handle_hero_logic(message):
             return
         return
 
-    # نصوص
     if message.content_type == 'text':
         if re.fullmatch(r'[\d\s\+\-\.،,]+', text.strip()):
             return
@@ -1335,23 +1292,84 @@ def handle_hero_logic(message):
 
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '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')
 
+# ═══════════════════════════════════════
+# 🎙️ تحويل الصوت — محاولتان لضمان النهاية
+# ═══════════════════════════════════════
+
 def transcribe_voice_local(file_path: str) -> str:
-    """تحويل الصوت لنص باستخدام Groq Whisper مجاناً"""
+    """
+    تحويل الصوت لنص عبر Groq Whisper.
+    يحلل الملف كاملاً + آخر 10 ثواني منفصلة
+    لضمان اكتشاف الكلمات المسيئة في نهاية البصمة.
+    """
     try:
         from groq import Groq
         client = Groq(api_key=GROQ_API_KEY)
+        results = []
+
+        # ── المحاولة الأولى: الملف كاملاً ──
         with open(file_path, "rb") as audio_file:
-            transcription = client.audio.transcriptions.create(
-                file=(file_path, audio_file.read()),
-                model="whisper-large-v3",
-                language="ar",
-                response_format="text",
-                prompt="اكتب الكلمات حرفياً كما نُطقت باللهجة العراقية العامية. لا تترجم ولا تحول أي كلمة للفصحى. اكتب الألفاظ العامية كما هي حتى لو كانت نابية."
+            audio_data = audio_file.read()
+
+        t1 = client.audio.transcriptions.create(
+            file=(os.path.basename(file_path), audio_data),
+            model="whisper-large-v3",
+            language="ar",
+            response_format="text",
+            prompt=(
+                "اكتب كل كلمة حرفياً كما نُطقت باللهجة العراقية العامية بدون أي تعديل أو حذف. "
+                "لا تحذف أي كلمة مهما كانت نابية أو قبيحة. لا تضع نجوم أو نقاط بدل الكلمات. "
+                "اكتب الكلمات مثل كس وطيز وعير وكلب وشرموطة حرفياً كما نُطقت."
             )
-        return transcription.strip() if transcription else ""
+        )
+        text1 = t1.strip() if t1 else ""
+        if text1:
+            results.append(text1)
+        print(f"📝 المحاولة 1 (كاملة): {text1}")
+
+        # ── المحاولة الثانية: آخر 10 ثواني فقط ──
+        tail_path = file_path.replace('.ogg', '_tail.ogg')
+        try:
+            proc = subprocess.run(
+                ['ffmpeg', '-y', '-sseof', '-10', '-i', file_path,
+                 '-acodec', 'copy', tail_path],
+                capture_output=True,
+                timeout=15
+            )
+            if os.path.exists(tail_path) and os.path.getsize(tail_path) > 500:
+                with open(tail_path, "rb") as tail_file:
+                    tail_data = tail_file.read()
+                t2 = client.audio.transcriptions.create(
+                    file=(os.path.basename(tail_path), tail_data),
+                    model="whisper-large-v3",
+                    language="ar",
+                    response_format="text",
+                    prompt=(
+                        "اكتب كل كلمة حرفياً كما نُطقت. "
+                        "لا تحذف أي كلمة مهما كانت نابية. "
+                        "كس وطيز وعير وكلب — اكتبها كما هي."
+                    )
+                )
+                text2 = t2.strip() if t2 else ""
+                if text2:
+                    results.append(text2)
+                print(f"📝 المحاولة 2 (النهاية): {text2}")
+        except Exception as e:
+            print(f"⚠️ خطأ في استخراج النهاية: {e}")
+        finally:
+            if os.path.exists(tail_path):
+                try: os.remove(tail_path)
+                except: pass
+
+        # ── دمج النتائج ──
+        combined = ' '.join(results).strip()
+        print(f"📝 النص المدمج النهائي: {combined}")
+        return combined
+
     except Exception as e:
         print(f"⚠️ خطأ في تحويل الصوت: {e}")
         return ""
+
 
 ADMIN_GROUP_ID = -1003746150788
 
@@ -1365,24 +1383,18 @@ GREETING_WORDS = [
 ]
 
 UBER_PAY_TRIGGERS = [
-    # فصحى / عامة
     'تسديد اوبر', 'طريقة تسديد اوبر', 'كيف تسديد اوبر',
     'كيف اسدد اوبر', 'اريد اسدد اوبر',
     'كيف يمكنني تسديد اوبر', 'كيف يمكنني الدفع لاوبر',
-    # شلون
     'شلون اسدد اوبر', 'شلون اصدد اوبر',
     'شلون طريقة تسديد اوبر', 'شلون طريقه تسديد اوبر',
     'اخوان شلون اسدد اوبر', 'شباب شلون اسدد اوبر',
-    # ماعرف / مو عارف
     'ماعرف اسدد اوبر', 'ما اعرف اسدد اوبر',
     'مو عارف اسدد اوبر', 'مو عارف كيف اسدد',
     'ما اعرف كيف اسدد', 'ماعرف كيف اسدد',
-    # ابر بدل اوبر
     'تسديد ابر', 'شلون اسدد ابر', 'طريقة تسديد ابر',
-    # دفع
     'شلون ادفع اوبر', 'كيف ادفع اوبر', 'ادفع اوبر',
     'طريقة الدفع اوبر', 'الدفع لاوبر',
-    # عراقي صريح
     'شلون اخلص ذمتي باوبر', 'شلون اخلص ذمتي',
     'اوبر تريد فلوس', 'اوبر تطلب فلوس',
     'عندي مبلغ باوبر', 'عندي ديون باوبر',
@@ -1390,25 +1402,20 @@ UBER_PAY_TRIGGERS = [
 ]
 
 UBER_WITHDRAW_TRIGGERS = [
-    # فصحى / عامة
     'سحب مستحقات اوبر', 'طريقة سحب مستحقات اوبر',
     'سحب الفلوس اوبر', 'كيف اسحب من اوبر',
     'طريقة السحب اوبر', 'سحب المستحقات',
-    # شلون
     'شلون اسحب فلوسي', 'شلون اسحب فلوسي باوبر',
     'شباب شلون اسحب فلوسي', 'اخوان شلون اسحب فلوسي',
     'احد يعرف شلون اسحب فلوسي',
-    # فلوسي / مستحقاتي
     'فلوسي باوبر', 'فلوسي بأوبر', 'اسحب فلوسي',
     'مستحقات اوبر', 'سحب اوبر',
-    # عراقي صريح
     'شلون اطلع فلوسي من اوبر', 'شلون اشيل فلوسي من اوبر',
     'اريد اشيل فلوسي', 'اريد اطلع فلوسي',
     'فلوسي محجوزه باوبر', 'فلوسي محبوسه باوبر',
     'ارباحي باوبر', 'شلون اسحب ارباحي',
     'اموالي باوبر', 'شلون اطلع اموالي',
     'حسابي باوبر فيه فلوس', 'شلون اسحب من حسابي',
-    # كريم
     'شلون اسحب فلوسي بكريم', 'شلون اسحب فلوسي من كريم',
     'سحب فلوسي من كريم', 'سحب مستحقات كريم',
     'كيف اسحب من كريم', 'شلون اسحب من كريم',
@@ -1418,13 +1425,10 @@ UBER_WITHDRAW_TRIGGERS = [
 ]
 
 UBER_CAREEM_TRIGGERS = [
-    # فصحى / عامة
     'ربط كريم', 'ربط كريم باوبر', 'ربط كريم في اوبر',
     'طريقة ربط كريم', 'كريم واوبر', 'كريم في اوبر',
-    # شلون / كيف
     'شلون اربط كريم', 'كيف اربط كريم',
     'شلون اربط كريم باوبر', 'شلون اربط كريم في اوبر',
-    # عراقي صريح
     'شلون اوصل كريم باوبر', 'شلون اوصل كريم',
     'اربط كريم باوبر', 'اربط كريم في اوبر',
     'شلون اخلي كريم يشتغل باوبر',
@@ -1434,14 +1438,11 @@ UBER_CAREEM_TRIGGERS = [
 ]
 
 UBER_MASTER_TRIGGERS = [
-    # فصحى / عامة
     'ربط الماستر', 'ربط ماستر', 'ربط الماستر باوبر',
     'طريقة ربط الماستر', 'ربط ماستر كارد',
     'اضافة ماستر', 'اضافة الماستر',
-    # شلون / كيف
     'شلون اربط الماستر', 'كيف اربط الماستر',
     'شلون اربط الماستر باوبر', 'شلون اربط ماستر باوبر',
-    # عراقي صريح
     'شلون اضيف الماستر', 'شلون اضيف ماستر كارد',
     'اضيف الماستر باوبر', 'اضيف ماستر باوبر',
     'شلون اوصل الماستر', 'شلون اوصل البطاقه',
@@ -1452,13 +1453,10 @@ UBER_MASTER_TRIGGERS = [
 ]
 
 UBER_CANCEL_TRIGGERS = [
-    # فصحى / عامة
     'تعويض الغاء', 'تعويض الالغاء', 'تعويض الرحله',
     'احصل على تعويض', 'اطلب تعويض',
-    # شلون / كيف
     'شلون احصل تعويض', 'كيف احصل تعويض',
     'شلون اطلب تعويض', 'كيف اطلب تعويض',
-    # عراقي صريح
     'الزبون الغى الرحله', 'الزبون كنسل',
     'الزبون كنسل علي', 'الكاستمر كنسل',
     'شلون استرد فلوسي', 'استرد فلوسي من اوبر',
@@ -1471,15 +1469,12 @@ UBER_CANCEL_TRIGGERS = [
 ]
 
 UBER_SUPPORT_TRIGGERS = [
-    # فصحى / عامة
     'دعم اوبر', 'كول سنتر اوبر', 'خدمة عملاء اوبر',
     'التواصل مع اوبر', 'اراسل الدعم', 'اراسل اوبر',
-    # شلون / كيف
     'شلون اراسل الدعم', 'كيف اراسل الدعم',
     'شلون اراسل اوبر', 'كيف اراسل اوبر',
     'شلون اراسل الكول سنتر', 'شلون اراسل الشركه',
     'شلون اتواصل مع اوبر', 'كيف اتواصل مع اوبر',
-    # عراقي صريح
     'شلون احجي مع اوبر', 'شلون اكلم اوبر',
     'اكلم اوبر', 'احجي مع اوبر', 'احجي مع الشركه',
     'شلون اكلم الكول سنتر', 'اكلم الكول سنتر',
@@ -1489,7 +1484,6 @@ UBER_SUPPORT_TRIGGERS = [
     'شلون ارفع شكوى', 'ارفع شكوى باوبر',
     'عندي مشكله باوبر شلون', 'عندي مشكلة باوبر',
     'شلون اشتكي باوبر', 'اشتكي باوبر',
-    # ويه (عراقي = مع)
     'شلون اتواصل ويه الدعم', 'اتواصل ويه الدعم',
     'شلون اتواصل ويه اوبر', 'اتواصل ويه اوبر',
     'شلون احجي ويه اوبر', 'احجي ويه اوبر',
@@ -1503,14 +1497,11 @@ UBER_SUPPORT_TRIGGERS = [
 ]
 
 UBER_TRIPS_TRIGGERS = [
-    # فصحى / عامة
     'تفاصيل الرحله', 'تفاصيل الرحلة', 'سجل الرحلات',
     'تاريخ الرحلات', 'تفاصيل رحلاتي',
-    # شلون / كيف
     'شلون اعرف تفاصيل الرحله', 'كيف اعرف تفاصيل الرحله',
     'شلون اطلع الرحله', 'كيف اطلع الرحله',
     'شلون اشوف الرحله', 'كيف اشوف الرحله',
-    # عراقي صريح
     'هاي رحله شلون اطلعها', 'هاي رحلة شلون اطلعها',
     'شلون اشوف رحلاتي', 'اشوف رحلاتي',
     'شلون اطلع رحلاتي', 'اطلع رحلاتي',
@@ -1523,34 +1514,26 @@ UBER_TRIPS_TRIGGERS = [
 ]
 
 def _normalize_arabic(text: str) -> str:
-    """يوحّد كتابة الحروف العربية لتجنب فروق الهمزات والألف والتاء"""
     if not text:
         return ""
-    # توحيد كل كتابات أوبر → اوبر
-    # يغطي: اوبر / أوبر / آوبر / اُوبر / أُوبر / أؤبر / ابر / أبر / آبار / ا.ب.ر / أ.ب.ر
-    text = re.sub(r'[أإآا][\s\.]*[ؤو][\s\.]*ب[\s\.]*ر', 'اوبر', text)  # أوبر / أؤبر
-    text = re.sub(r'[أإآا][\s\.]*ب[\s\.]*[اأآ][\s\.]*ر', 'اوبر', text)  # آبار / ابار
-    text = re.sub(r'[أإآا][\s\.]*ب[\s\.]*ر', 'اوبر', text)               # ابر / أبر
-    text = re.sub(r'u[\s\.]?b[\s\.]?e[\s\.]?r', 'اوبر', text, flags=re.IGNORECASE)  # uber
-    # توحيد الهمزات
+    text = re.sub(r'[أإآا][\s\.]*[ؤو][\s\.]*ب[\s\.]*ر', 'اوبر', text)
+    text = re.sub(r'[أإآا][\s\.]*ب[\s\.]*[اأآ][\s\.]*ر', 'اوبر', text)
+    text = re.sub(r'[أإآا][\s\.]*ب[\s\.]*ر', 'اوبر', text)
+    text = re.sub(r'u[\s\.]?b[\s\.]?e[\s\.]?r', 'اوبر', text, flags=re.IGNORECASE)
     text = re.sub(r'[أإآا]', 'ا', text)
     text = re.sub(r'[ةه]', 'ه', text)
     text = re.sub(r'[يى]', 'ي', text)
     text = re.sub(r'[ؤو]', 'و', text)
-    # حذف التشكيل
     text = re.sub(r'[\u064B-\u065F]', '', text)
     return text.lower().strip()
 
 def contains_uber_withdraw_question(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على سؤال عن سحب مستحقات أوبر"""
     if not text:
         return False
     norm = _normalize_arabic(text)
-    # طريقة 1: مطابقة العبارات الحرفية
     for phrase in UBER_WITHDRAW_TRIGGERS:
         if _normalize_arabic(phrase) in norm:
             return True
-    # طريقة 2: وجود كلمة أوبر أو كريم + كلمة سحب معاً
     has_app = 'اوبر' in norm or 'كريم' in norm
     has_withdraw = any(w in norm for w in ['سحب', 'اسحب', 'مستحقات', 'فلوس', 'ارباح', 'السحب', 'اشيل', 'اطلع'])
     if has_app and has_withdraw:
@@ -1558,7 +1541,6 @@ def contains_uber_withdraw_question(text: str) -> bool:
     return False
 
 def contains_uber_pay_question(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على سؤال عن تسديد أوبر"""
     if not text:
         return False
     norm = _normalize_arabic(text)
@@ -1572,7 +1554,6 @@ def contains_uber_pay_question(text: str) -> bool:
     return False
 
 def contains_uber_careem_question(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على سؤال عن ربط كريم بأوبر"""
     if not text:
         return False
     norm = _normalize_arabic(text)
@@ -1587,7 +1568,6 @@ def contains_uber_careem_question(text: str) -> bool:
     return False
 
 def contains_uber_master_question(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على سؤال عن ربط الماستر بأوبر"""
     if not text:
         return False
     norm = _normalize_arabic(text)
@@ -1601,7 +1581,6 @@ def contains_uber_master_question(text: str) -> bool:
     return False
 
 def contains_uber_cancel_question(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على سؤال عن تعويض إلغاء الرحلة"""
     if not text:
         return False
     norm = _normalize_arabic(text)
@@ -1615,7 +1594,6 @@ def contains_uber_cancel_question(text: str) -> bool:
     return False
 
 def contains_uber_support_question(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على سؤال عن دعم أوبر"""
     if not text:
         return False
     norm = _normalize_arabic(text)
@@ -1626,7 +1604,6 @@ def contains_uber_support_question(text: str) -> bool:
     has_support = any(w in norm for w in ['دعم', 'سبورت', 'كول سنتر', 'كولسنتر', 'اراسل', 'اتواصل', 'احجي', 'اكلم', 'خدمه', 'خدمة', 'شركه', 'شركة', 'ويه', 'مال اوبر', 'مالت اوبر'])
     if has_uber and has_support:
         return True
-    # كشف "ويه الدعم" حتى بدون ذكر اوبر صريح
     if 'ويه' in norm and 'دعم' in norm:
         return True
     if 'الدعم مال' in norm or 'الدعم مالت' in norm:
@@ -1634,7 +1611,6 @@ def contains_uber_support_question(text: str) -> bool:
     return False
 
 def contains_uber_trips_question(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على سؤال عن تفاصيل الرحلات"""
     if not text:
         return False
     norm = _normalize_arabic(text)
@@ -1648,7 +1624,6 @@ def contains_uber_trips_question(text: str) -> bool:
     return False
 
 def contains_greeting(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على تحية"""
     if not text:
         return False
     text_lower = text.lower().strip()
@@ -1657,17 +1632,46 @@ def contains_greeting(text: str) -> bool:
             return True
     return False
 
-def is_offensive_by_ai(text: str) -> bool:
-    """يتحقق فقط من الكلمات المكتوبة في VOICE_BANNED_WORDS — بدون AI"""
-    return contains_banned_voice_word(text)
+# ═══════════════════════════════════════
+# 🔍 تحليل البصمة الصوتية وحذفها
+# ═══════════════════════════════════════
+
+def _check_banned_in_text(text: str) -> str:
+    """
+    يفحص النص بثلاث طرق لضمان اكتشاف الكلمات المسيئة
+    حتى لو كانت في نهاية البصمة أو ملصوقة بكلمات أخرى.
+    يرجع الكلمة المحظورة أو نص فارغ.
+    """
+    if not text:
+        return ""
+
+    # الطريقة 1: النص كاملاً
+    found = get_found_banned_word(text)
+    if found:
+        return found
+
+    # الطريقة 2: كل كلمة منفردة (للكلمات الملصوقة)
+    for word in text.split():
+        found = get_found_banned_word(word)
+        if found:
+            return found
+
+    # الطريقة 3: النصف الثاني من النص (التركيز على النهاية)
+    half = len(text) // 2
+    found = get_found_banned_word(text[half:])
+    if found:
+        return found
+
+    return ""
 
 def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
-    """تحليل البصمة الصوتية وحذفها إذا كانت مسيئة"""
+    """تحليل البصمة الصوتية كاملة وحذفها إذا احتوت على كلمات محظورة"""
     try:
-        text = transcribe_voice_local(file_path)
-        print(f"📝 نص البصمة: {text}")
+        # تحويل الصوت — محاولتان (كاملة + آخر 10 ثواني)
+        combined_text = transcribe_voice_local(file_path)
+        print(f"📝 النص النهائي للفحص: {combined_text}")
 
-        if not text:
+        if not combined_text:
             return
 
         def send_video(key, label):
@@ -1681,44 +1685,53 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
             except Exception as e:
                 print(f"⚠️ خطأ في إرسال فيديو {label}: {e}")
 
-        # ── فحص الكلمات المحظورة أولاً — على النص الكامل مهما كان طوله ──
-        banned_word = get_found_banned_word(text)
+        # ── فحص الكلمات المحظورة بثلاث طرق ──
+        banned_word = _check_banned_in_text(combined_text)
+
         if banned_word:
             print(f"🚫 كلمة محظورة وُجدت: {banned_word}")
+            # إرسال نسخة الصوت للإدارة مع النص
             try:
                 if os.path.exists(file_path):
                     with open(file_path, 'rb') as audio:
                         bot_instance.send_voice(
                             ADMIN_GROUP_ID,
                             audio,
-                            caption=f"🚨 بصمة مسيئة تم حذفها\n🔴 الكلمة: {banned_word}\n👥 كباتن صقور العراق"
+                            caption=(
+                                f"🚨 بصمة مسيئة تم حذفها\n"
+                                f"🔴 الكلمة: {banned_word}\n"
+                                f"📝 النص: {combined_text}\n"
+                                f"👥 كباتن صقور العراق"
+                            )
                         )
             except Exception as e:
-                print(f"⚠️ خطأ في إرسال للإدارة: {e}")
+                print(f"⚠️ خطأ في الإرسال للإدارة: {e}")
+            # حذف البصمة من المجموعة
             try:
                 bot_instance.delete_message(chat_id, message_id)
                 print(f"🚫 تم حذف بصمة تحتوي على: {banned_word}")
             except Exception as e:
                 print(f"⚠️ خطأ في الحذف: {e}")
-            return  # انتهى — لا تكمل
+            return  # انتهى — لا تكمل لفحوصات الأوبر
 
         # ── فحوصات الأسئلة والتحيات فقط إذا لم توجد كلمة محظورة ──
-        if contains_uber_pay_question(text):
+        if contains_uber_pay_question(combined_text):
             send_video('uber_pay', 'تسديد أوبر')
-        elif contains_uber_withdraw_question(text):
+        elif contains_uber_withdraw_question(combined_text):
             send_video('uber_withdraw', 'سحب المستحقات')
-        elif contains_uber_careem_question(text):
+        elif contains_uber_careem_question(combined_text):
             send_video('uber_careem', 'ربط كريم')
-        elif contains_uber_master_question(text):
+        elif contains_uber_master_question(combined_text):
             send_video('uber_master', 'ربط الماستر')
-        elif contains_uber_cancel_question(text):
+        elif contains_uber_cancel_question(combined_text):
             send_video('uber_cancel', 'تعويض الإلغاء')
-        elif contains_uber_support_question(text):
+        elif contains_uber_support_question(combined_text):
             send_video('uber_support', 'دعم أوبر')
-        elif contains_uber_trips_question(text):
+        elif contains_uber_trips_question(combined_text):
             send_video('uber_trips', 'تفاصيل الرحلات')
-        elif contains_greeting(text):
+        elif contains_greeting(combined_text):
             pass
+
     except Exception as e:
         print(f"⚠️ خطأ في تحليل الصوت: {e}")
     finally:
@@ -1811,8 +1824,7 @@ def handle_glitch_fixed(call):
 
 
 # ═══════════════════════════════════════
-# 🎬 بوت التحميل المستقل (telebot)
-# يعمل على TOKEN منفصل في thread منفصل
+# 🎬 بوت التحميل المستقل
 # ═══════════════════════════════════════
 
 dl_bot = telebot.TeleBot(DOWNLOADER_TOKEN)
@@ -1837,7 +1849,6 @@ def dl_download(message):
 
     url       = message.text.strip()
     chat_id   = message.chat.id
-    msg_id    = message.message_id
 
     if 'shorts/' in url:
         url = url.replace('shorts/', 'watch?v=')
@@ -1927,11 +1938,9 @@ if __name__ == "__main__":
     print("✅ البوت الرئيسي يعمل...")
     resolve_default_groups()
 
-    # تشغيل بوت التحميل في thread منفصل
     downloader_thread = threading.Thread(target=run_downloader_bot, daemon=True)
     downloader_thread.start()
 
-    # تشغيل البوت الرئيسي في الـ main thread
     while True:
         try:
             bot.delete_webhook(drop_pending_updates=True)
