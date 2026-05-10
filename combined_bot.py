@@ -1252,12 +1252,44 @@ def contains_greeting(text: str) -> bool:
             return True
     return False
 
+def is_offensive_by_ai(text: str) -> bool:
+    """يستخدم Groq LLM لتحليل إذا الكلام فيه إساءة حقيقية بالسياق العراقي"""
+    try:
+        from groq import Groq
+        client = Groq(api_key=GROQ_API_KEY)
+        response = client.chat.completions.create(
+            model="llama3-8b-8192",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "أنت محلل نصوص متخصص باللهجة العراقية. "
+                        "مهمتك تحديد إذا النص يحتوي على إساءة أو شتيمة أو لفظ نابي حقيقي. "
+                        "تجاهل الكلمات التي تُستخدم بشكل عادي في اللهجة العراقية بدون قصد الإساءة. "
+                        "أجب فقط بكلمة واحدة: نعم أو لا"
+                    )
+                },
+                {
+                    "role": "user",
+                    "content": f"هل هذا الكلام فيه إساءة أو شتيمة؟\n{text}"
+                }
+            ],
+            max_tokens=10,
+            temperature=0
+        )
+        answer = response.choices[0].message.content.strip()
+        return "نعم" in answer
+    except Exception as e:
+        print(f"⚠️ خطأ في تحليل AI: {e}")
+        # في حالة خطأ نرجع للطريقة القديمة
+        return contains_banned_voice_word(text)
+
 def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
     """تحليل البصمة الصوتية وحذفها إذا كانت مسيئة"""
     try:
         text = transcribe_voice_local(file_path)
         print(f"📝 نص البصمة: {text}")
-        if text and contains_banned_voice_word(text):
+        if text and is_offensive_by_ai(text):
             try:
                 # إرسال البصمة لكروب الإدارة أولاً
                 with open(file_path, 'rb') as audio:
