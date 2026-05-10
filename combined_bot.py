@@ -1232,6 +1232,25 @@ UBER_PAY_TRIGGERS = [
     'تسديد اوبر', 'كيف اسدد اوبر',
 ]
 
+UBER_WITHDRAW_TRIGGERS = [
+    'طريقة سحب مستحقات اوبر', 'شلون اسحب فلوسي',
+    'شلون اسحب فلوسي باوبر', 'شلون اسحب فلوسي بأوبر',
+    'طريقة سحب الفلوس من اوبر', 'احد يعرف شلون اسحب فلوسي',
+    'شباب شلون اسحب فلوسي', 'سحب مستحقات اوبر',
+    'سحب الفلوس اوبر', 'كيف اسحب من اوبر',
+    'شلون اسحب من اوبر', 'طريقة السحب اوبر',
+]
+
+def contains_uber_withdraw_question(text: str) -> bool:
+    """يتحقق إذا النص يحتوي على سؤال عن سحب مستحقات أوبر"""
+    if not text:
+        return False
+    text_lower = text.lower().strip()
+    for phrase in UBER_WITHDRAW_TRIGGERS:
+        if phrase.lower() in text_lower:
+            return True
+    return False
+
 def contains_uber_pay_question(text: str) -> bool:
     """يتحقق إذا النص يحتوي على سؤال عن تسديد أوبر"""
     if not text:
@@ -1316,6 +1335,16 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                 )
             except Exception as e:
                 print(f"⚠️ خطأ في إرسال فيديو تسديد أوبر: {e}")
+        elif text and contains_uber_withdraw_question(text):
+            try:
+                bot_instance.send_video(
+                    chat_id,
+                    FIXED_VIDEOS['uber_withdraw'],
+                    caption=CHANNEL,
+                    reply_to_message_id=message_id
+                )
+            except Exception as e:
+                print(f"⚠️ خطأ في إرسال فيديو سحب المستحقات: {e}")
         elif text and contains_greeting(text):
             try:
                 bot_instance.set_message_reaction(
