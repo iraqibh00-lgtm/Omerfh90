@@ -1031,7 +1031,7 @@ def check_and_delete_nsfw(chat_id, message_id, user_id, file_id):
             nudity.get('erotica', 0),
         )
         print(f"🔞 فحص صورة — نتيجة: {score:.2f}")
-        if score >= 0.6:
+        if score >= 0.5:
             # حذف الصورة دائماً
             try: bot.delete_message(chat_id, message_id)
             except: pass
