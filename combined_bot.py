@@ -23,6 +23,12 @@ GROUP_LINK   = "https://t.me/FalconsofIraq"
 DOWNLOADER_TOKEN = '8266072398:AAHO8y2Vd-i-3h9MQbx_i2ui2mMl6X9RRcY'
 
 # ═══════════════════════════════════════
+# 🔞 Sightengine — كشف الصور الإباحية
+# ═══════════════════════════════════════
+SIGHTENGINE_USER   = '2955790'
+SIGHTENGINE_SECRET = 'WULHupUUetaSHwc7xRNTHY9dNsoKwc3K'
+
+# ═══════════════════════════════════════
 # 📋 القائمة البيضاء للروابط
 # ═══════════════════════════════════════
 
@@ -999,6 +1005,58 @@ def handle_video_download_sync(chat_id, reply_to_id, url):
 
 # ═══════════════════════════════════════
 # معالج رسائل المجموعة
+# عداد الصور الإباحية لكل مستخدم {user_id: count}
+nsfw_violations = {}
+
+def check_and_delete_nsfw(chat_id, message_id, user_id, file_id):
+    """فحص الصورة عبر Sightengine وحذفها إذا كانت إباحية"""
+    try:
+        file_info = bot.get_file(file_id)
+        file_url  = f"https://api.telegram.org/file/bot{BOT_TOKEN}/{file_info.file_path}"
+        response  = requests.get(
+            'https://api.sightengine.com/1.0/check.json',
+            params={
+                'url':        file_url,
+                'models':     'nudity-2.0',
+                'api_user':   SIGHTENGINE_USER,
+                'api_secret': SIGHTENGINE_SECRET,
+            },
+            timeout=10
+        )
+        result = response.json()
+        nudity = result.get('nudity', {})
+        score  = max(
+            nudity.get('sexual_activity', 0),
+            nudity.get('sexual_display', 0),
+            nudity.get('erotica', 0),
+        )
+        print(f"🔞 فحص صورة — نتيجة: {score:.2f}")
+        if score >= 0.6:
+            # حذف الصورة دائماً
+            try: bot.delete_message(chat_id, message_id)
+            except: pass
+            # زيادة العداد
+            nsfw_violations[user_id] = nsfw_violations.get(user_id, 0) + 1
+            count = nsfw_violations[user_id]
+            print(f"🚫 صورة إباحية — المستخدم {user_id} — المرة {count}")
+            # تقييد فقط بعد 3 مرات
+            if count >= 3:
+                try:
+                    bot.restrict_chat_member(
+                        chat_id, user_id,
+                        telebot.types.ChatPermissions(
+                            can_send_messages=False,
+                            can_send_media_messages=False,
+                            can_send_other_messages=False,
+                            can_add_web_page_previews=False
+                        )
+                    )
+                    nsfw_violations[user_id] = 0  # إعادة العداد
+                    print(f"🔒 تم تقييد المستخدم {user_id} بعد 3 مخالفات")
+                except: pass
+    except Exception as e:
+        print(f"⚠️ خطأ في فحص الصورة: {e}")
+
 # ═══════════════════════════════════════
 
 @bot.message_handler(content_types=['sticker', 'animation', 'video_note'])
@@ -1203,6 +1261,13 @@ def handle_hero_logic(message):
 
     # صور وفيديوهات
     if message.content_type in ['photo', 'video']:
+        # 🔞 فحص الصور الإباحية أولاً
+        if message.content_type == 'photo':
+            threading.Thread(
+                target=check_and_delete_nsfw,
+                args=(chat_id, message.message_id, user_id, message.photo[-1].file_id)
+            ).start()
+            return
         if word_count > 10:
             try: bot.delete_message(chat_id, message.message_id)
             except: pass
