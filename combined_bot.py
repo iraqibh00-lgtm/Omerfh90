@@ -1674,17 +1674,22 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
         if banned_word:
             print(f"🚫 كلمة محظورة وُجدت: {banned_word}")
             try:
+                def get_short_context(text, banned):
+                    sentences = re.split(r'[.،؟!]', text)
+                    for s in sentences:
+                        if banned in s.lower():
+                            words = s.strip().split()
+                            return ' '.join(words[:2]) if len(words) >= 2 else s.strip()
+                    words = text.strip().split()
+                    return ' '.join(words[:2])
+
+                short_ctx = get_short_context(combined_text, banned_word)
                 if os.path.exists(file_path):
                     with open(file_path, 'rb') as audio:
                         bot_instance.send_voice(
                             ADMIN_GROUP_ID,
                             audio,
-                            caption=(
-                                f"🚨 بصمة مسيئة تم حذفها\n"
-                                f"🔴 الكلمة: {banned_word}\n"
-                                f"📝 النص: {combined_text}\n"
-                                f"👥 كباتن صقور العراق"
-                            )
+                            caption=f"🚨 {short_ctx}"
                         )
             except Exception as e:
                 print(f"⚠️ خطأ في الإرسال للإدارة: {e}")
