@@ -256,7 +256,15 @@ VOICE_BANNED_WORDS = [
 
 # كلمات آمنة تحتوي على جذر محظور لكنها كلمات عادية
 _WORD_WHITELIST = {
-    'كس': ['تكسي', 'التكسي', 'تاكسي', 'التاكسي', 'ماكسي', 'باكستاني', 'باكستان'],
+    'كس':  ['تكسي', 'التكسي', 'تاكسي', 'التاكسي', 'ماكسي', 'باكستاني', 'باكستان'],
+    'كلب': ['جلب', 'الجلب', 'يجلب', 'جلبت', 'جلبوا'],
+}
+
+# كلمات يجب تجاهلها دائماً بغض النظر عن أي قاعدة
+_GLOBAL_SAFE_WORDS = {
+    'سنه', 'سنتين', 'سنوات', 'سنين',
+    'تكسي', 'التكسي', 'تاكسي', 'التاكسي',
+    'جلب', 'الجلب', 'يجلب', 'جلبت', 'جلبوا',
 }
 
 def _bare_word_present(word: str, text_lower: str) -> bool:
@@ -265,15 +273,17 @@ def _bare_word_present(word: str, text_lower: str) -> bool:
     return bool(re.search(pattern, text_lower, re.IGNORECASE))
 
 def _is_word_match(word: str, text_lower: str) -> bool:
-    """يتحقق من الكلمة المحظورة مع تجاهل الكلمات الآمنة مثل تكسي"""
-    whitelist = _WORD_WHITELIST.get(word.lower(), [])
-    for safe_word in whitelist:
-        pattern_safe = r'(?<!\w)' + re.escape(safe_word.lower()) + r'(?!\w)'
-        if re.search(pattern_safe, text_lower):
-            cleaned = re.sub(pattern_safe, ' ', text_lower)
-            if not _bare_word_present(word.lower(), cleaned):
-                return False
-    return _bare_word_present(word.lower(), text_lower)
+    """يتحقق من الكلمة المحظورة مع تجاهل الكلمات الآمنة"""
+    # إذا الكلمة المحظورة نفسها موجودة في القائمة الآمنة — تجاهل
+    if word.lower() in _GLOBAL_SAFE_WORDS:
+        return False
+    # إزالة الكلمات الآمنة من النص قبل الفحص
+    cleaned = text_lower
+    all_safe = list(_GLOBAL_SAFE_WORDS) + _WORD_WHITELIST.get(word.lower(), [])
+    for safe_word in all_safe:
+        pattern_safe = r'(?<![^\W\d_\u0600-\u06FF])' + re.escape(safe_word.lower()) + r'(?![^\W\d_\u0600-\u06FF])'
+        cleaned = re.sub(pattern_safe, ' ', cleaned)
+    return _bare_word_present(word.lower(), cleaned)
 
 def contains_banned_voice_word(text: str) -> bool:
     """يتحقق إذا النص يحتوي على كلمة محظورة — مطابقة كلمة مستقلة مع تجاهل تكسي"""
