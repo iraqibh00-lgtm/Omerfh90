@@ -279,7 +279,6 @@ VOICE_BANNED_WORDS = [
     'الشيعه', 'السنة', 'كواد',
 ]
 
-# كلمات آمنة تحتوي على جذر محظور لكنها كلمات عادية
 _WORD_WHITELIST = {
     'كس':  ['تكسي', 'التكسي', 'تاكسي', 'التاكسي', 'ماكسي', 'باكستاني', 'باكستان', 'بلكسن', 'بلك سن', 'بلكسنن'],
     'كلب': ['جلب', 'الجلب', 'يجلب', 'جلبت', 'جلبوا'],
@@ -288,7 +287,6 @@ _WORD_WHITELIST = {
     'مطي': ['مطي', 'المطي', 'مطية', 'المطية', 'مطيه', 'المطيه'],
 }
 
-# كلمات يجب تجاهلها دائماً بغض النظر عن أي قاعدة
 _GLOBAL_SAFE_WORDS = {
     'سنه', 'سنة', 'سنا', 'سنتين', 'سنوات', 'سنين',
     'تكسي', 'التكسي', 'تاكسي', 'التاكسي',
@@ -929,8 +927,9 @@ def handle_private_message(message):
 
     if is_downloadable_url(text):
         threading.Thread(
-            target=handle_video_download_sync,
-            args=(message.chat.id, message.message_id, text)
+            target=download_and_send_video,
+            args=(bot, message.chat.id, message.message_id, text),
+            daemon=True
         ).start()
         return
 
@@ -942,67 +941,159 @@ def handle_private_message(message):
 
 
 # ═══════════════════════════════════════
-# 🎬 تحميل الفيديو — منطق مشترك (sync)
+# 🎬 دالة التحميل الموحدة المصلحة
 # ═══════════════════════════════════════
 
-def handle_video_download_sync(chat_id, reply_to_id, url):
+def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
+    """دالة موحدة للتحميل — تعمل مع البوت الرئيسي وبوت التحميل"""
+
+    if not YT_DLP_AVAILABLE:
+        try:
+            bot_instance.send_message(chat_id, "⚠️ خدمة التحميل غير متاحة حالياً.",
+                                      reply_to_message_id=reply_to_id)
+        except: pass
+        return
+
+    # تصحيح رابط Shorts
     if 'shorts/' in url:
         url = url.replace('shorts/', 'watch?v=')
 
     try:
-        status_msg = bot.send_message(chat_id, "الصقور تحملك الفيديو انتظر يابطل 🦅🔥",
-                                      reply_to_message_id=reply_to_id)
+        status_msg = bot_instance.send_message(
+            chat_id,
+            "الصقور تحملك الفيديو انتظر يابطل 🦅🔥",
+            reply_to_message_id=reply_to_id
+        )
     except:
         return
 
     filename_base = f"video_{chat_id}_{int(time.time())}"
 
+    # ── خيارات yt_dlp المصلحة ──
     ydl_opts = {
-        'format': 'best',
         'outtmpl': f'{filename_base}.%(ext)s',
         'quiet': True,
         'no_warnings': True,
         'noplaylist': True,
-        'user_agent': (
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-            'AppleWebKit/537.36 (KHTML, like Gecko) '
-            'Chrome/121.0.0.0 Safari/537.36'
-        ),
         'nocheckcertificate': True,
         'geo_bypass': True,
-        'add_header': {
+        'socket_timeout': 30,
+        'retries': 3,
+        'http_headers': {
+            'User-Agent': (
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
+                'AppleWebKit/537.36 (KHTML, like Gecko) '
+                'Chrome/121.0.0.0 Safari/537.36'
+            ),
             'Accept-Language': 'en-US,en;q=0.9',
             'Referer': 'https://www.google.com/'
-        }
+        },
     }
+
+    # ── إعدادات خاصة بكل منصة ──
+    if 'instagram.com' in url:
+        ydl_opts['format'] = 'best[filesize<50M]/best'
+    elif 'tiktok.com' in url or 'vm.tiktok.com' in url or 'vt.tiktok.com' in url:
+        ydl_opts['format'] = 'best[filesize<50M]/best'
+    elif 'facebook.com' in url or 'fb.watch' in url or 'fb.com' in url:
+        ydl_opts['format'] = 'best[filesize<50M]/best'
+    else:
+        # YouTube وبقية المنصات
+        ydl_opts['format'] = (
+            'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]'
+            '/best[ext=mp4][height<=720]'
+            '/best[height<=720]'
+            '/best'
+        )
+        ydl_opts['merge_output_format'] = 'mp4'
+
+    downloaded_file = None
 
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info     = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
+            info = ydl.extract_info(url, download=True)
 
-        with open(filename, 'rb') as video_file:
-            bot.send_video(
+            # ── البحث الموثوق عن الملف المحمَّل ──
+            # الطريقة 1: prepare_filename
+            guessed = ydl.prepare_filename(info)
+
+            # الطريقة 2: البحث في المجلد لو الامتداد تغيّر
+            if not os.path.exists(guessed):
+                for f in os.listdir('.'):
+                    if f.startswith(filename_base) and not f.endswith('.part') and not f.endswith('.ytdl'):
+                        guessed = f
+                        break
+
+            downloaded_file = guessed
+
+        if not downloaded_file or not os.path.exists(downloaded_file):
+            raise FileNotFoundError("الملف لم يُحمَّل بشكل صحيح")
+
+        # ── فحص الحجم (50MB حد تيليغرام) ──
+        file_size = os.path.getsize(downloaded_file)
+        if file_size > 50 * 1024 * 1024:
+            try:
+                bot_instance.edit_message_text(
+                    "⚠️ الفيديو أكبر من 50MB، لا يمكن إرساله عبر تيليغرام.",
+                    chat_id, status_msg.message_id
+                )
+            except: pass
+            return
+
+        # ── إرسال الفيديو ──
+        with open(downloaded_file, 'rb') as video_file:
+            bot_instance.send_video(
                 chat_id,
                 video_file,
                 caption=GROUP_LINK,
-                supports_streaming=True
+                supports_streaming=True,
+                timeout=120
             )
 
-        if os.path.exists(filename):
-            os.remove(filename)
-
-        try: bot.delete_message(chat_id, status_msg.message_id)
+        try: bot_instance.delete_message(chat_id, status_msg.message_id)
         except: pass
 
-    except Exception as e:
-        print(f"Download error: {e}")
+    except yt_dlp.utils.DownloadError as e:
+        err_str = str(e).lower()
+        print(f"❌ DownloadError: {e}")
+
+        if 'private' in err_str:
+            user_msg = "⚠️ الفيديو خاص أو محمي، لا يمكن تحميله."
+        elif 'age' in err_str:
+            user_msg = "⚠️ الفيديو مقيد بالعمر."
+        elif 'copyright' in err_str:
+            user_msg = "⚠️ الفيديو محمي بحقوق النشر."
+        elif 'unavailable' in err_str or 'removed' in err_str or 'not exist' in err_str:
+            user_msg = "⚠️ الفيديو غير متاح أو تم حذفه."
+        elif 'login' in err_str or 'sign in' in err_str:
+            user_msg = "⚠️ هذا الفيديو يتطلب تسجيل دخول."
+        else:
+            user_msg = "⚠️ حدث خطأ في التحميل. تأكد من الرابط وحاول مجدداً."
+
         try:
-            bot.edit_message_text(
-                "⚠️ حدث خطأ أو الرابط غير مدعوم.\nتأكد من جودة الإنترنت.",
+            bot_instance.edit_message_text(user_msg, chat_id, status_msg.message_id)
+        except: pass
+
+    except FileNotFoundError as e:
+        print(f"❌ FileNotFoundError: {e}")
+        try:
+            bot_instance.edit_message_text(
+                "⚠️ فشل التحميل. الرابط غير مدعوم أو انتهت صلاحيته.",
                 chat_id, status_msg.message_id
             )
         except: pass
+
+    except Exception as e:
+        print(f"❌ خطأ غير متوقع: {e}")
+        try:
+            bot_instance.edit_message_text(
+                "⚠️ حدث خطأ غير متوقع. حاول مرة أخرى.",
+                chat_id, status_msg.message_id
+            )
+        except: pass
+
+    finally:
+        # ── حذف جميع الملفات المؤقتة ──
         for f in os.listdir('.'):
             if f.startswith(filename_base):
                 try: os.remove(f)
@@ -1292,22 +1383,12 @@ def handle_hero_logic(message):
 
 GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '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')
 
-# ═══════════════════════════════════════
-# 🎙️ تحويل الصوت — محاولتان لضمان النهاية
-# ═══════════════════════════════════════
-
 def transcribe_voice_local(file_path: str) -> str:
-    """
-    تحويل الصوت لنص عبر Groq Whisper.
-    يحلل الملف كاملاً + آخر 10 ثواني منفصلة
-    لضمان اكتشاف الكلمات المسيئة في نهاية البصمة.
-    """
     try:
         from groq import Groq
         client = Groq(api_key=GROQ_API_KEY)
         results = []
 
-        # ── المحاولة الأولى: الملف كاملاً ──
         with open(file_path, "rb") as audio_file:
             audio_data = audio_file.read()
 
@@ -1326,7 +1407,6 @@ def transcribe_voice_local(file_path: str) -> str:
             results.append(text1)
         print(f"📝 المحاولة 1 (كاملة): {text1}")
 
-        # ── المحاولة الثانية: آخر 10 ثواني فقط ──
         tail_path = file_path.replace('.ogg', '_tail.ogg')
         try:
             proc = subprocess.run(
@@ -1359,7 +1439,6 @@ def transcribe_voice_local(file_path: str) -> str:
                 try: os.remove(tail_path)
                 except: pass
 
-        # ── دمج النتائج ──
         combined = ' '.join(results).strip()
         print(f"📝 النص المدمج النهائي: {combined}")
         return combined
@@ -1815,7 +1894,7 @@ def handle_glitch_fixed(call):
 
 
 # ═══════════════════════════════════════
-# 🎬 بوت التحميل المستقل
+# 🎬 بوت التحميل المستقل (المصلح)
 # ═══════════════════════════════════════
 
 dl_bot = telebot.TeleBot(DOWNLOADER_TOKEN)
@@ -1823,10 +1902,15 @@ dl_bot = telebot.TeleBot(DOWNLOADER_TOKEN)
 @dl_bot.message_handler(commands=['start'])
 def dl_start(message):
     welcome_text = (
-        "اهلا وسهلا بكم بوت صقور العراق لتحميل الفيديوهات\n"
-        "أمن ✅\n"
-        "سريع ✅\n"
-        "بدون اعلانات ✅\n\n"
+        "اهلا وسهلا بكم بوت صقور العراق لتحميل الفيديوهات 🦅\n\n"
+        "✅ أمن\n"
+        "✅ سريع\n"
+        "✅ بدون اعلانات\n\n"
+        "📌 المنصات المدعومة:\n"
+        "• YouTube\n"
+        "• TikTok\n"
+        "• Instagram\n"
+        "• Facebook\n\n"
         "فقط انسخ رابط الفيديو والصقه هنا 👇\n\n"
         "مجموعتنا على تلغرام حياكم الله " + GROUP_LINK
     )
@@ -1834,64 +1918,11 @@ def dl_start(message):
 
 @dl_bot.message_handler(func=lambda m: m.text and is_downloadable_url(m.text.strip()))
 def dl_download(message):
-    if not YT_DLP_AVAILABLE:
-        dl_bot.reply_to(message, "⚠️ خدمة التحميل غير متاحة حالياً.")
-        return
-
-    url       = message.text.strip()
-    chat_id   = message.chat.id
-
-    if 'shorts/' in url:
-        url = url.replace('shorts/', 'watch?v=')
-
-    status_msg    = dl_bot.reply_to(message, "الصقور تحملك الفيديو انتظر يابطل 🦅🔥")
-    filename_base = f"dl_{chat_id}_{int(time.time())}"
-
-    ydl_opts = {
-        'format': 'best',
-        'outtmpl': f'{filename_base}.%(ext)s',
-        'quiet': True,
-        'no_warnings': True,
-        'noplaylist': True,
-        'user_agent': (
-            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) '
-            'AppleWebKit/537.36 (KHTML, like Gecko) '
-            'Chrome/121.0.0.0 Safari/537.36'
-        ),
-        'nocheckcertificate': True,
-        'geo_bypass': True,
-        'add_header': {
-            'Accept-Language': 'en-US,en;q=0.9',
-            'Referer': 'https://www.google.com/'
-        }
-    }
-
-    try:
-        import yt_dlp as _yt
-        with _yt.YoutubeDL(ydl_opts) as ydl:
-            info     = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-
-        with open(filename, 'rb') as video:
-            dl_bot.send_video(chat_id, video, caption=GROUP_LINK, supports_streaming=True)
-
-        if os.path.exists(filename):
-            os.remove(filename)
-        try: dl_bot.delete_message(chat_id, status_msg.message_id)
-        except: pass
-
-    except Exception as e:
-        print(f"Downloader error: {e}")
-        try:
-            dl_bot.edit_message_text(
-                "⚠️ حدث خطأ أو الرابط غير مدعوم.\nتأكد من جودة الإنترنت.",
-                chat_id, status_msg.message_id
-            )
-        except: pass
-        for f in os.listdir('.'):
-            if f.startswith(filename_base):
-                try: os.remove(f)
-                except: pass
+    threading.Thread(
+        target=download_and_send_video,
+        args=(dl_bot, message.chat.id, message.message_id, message.text.strip()),
+        daemon=True
+    ).start()
 
 @dl_bot.message_handler(func=lambda m: True)
 def dl_unknown(message):
