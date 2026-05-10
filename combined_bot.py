@@ -255,7 +255,7 @@ VOICE_BANNED_WORDS = [
 ]
 
 def contains_banned_voice_word(text: str) -> bool:
-    """يتحقق إذا النص يحتوي على كلمة محظورة"""
+    """يتحقق إذا النص يحتوي على كلمة محظورة — مطابقة حرفية فقط بدون مرادفات"""
     if not text:
         return False
     text_lower = text.lower().strip()
@@ -263,6 +263,16 @@ def contains_banned_voice_word(text: str) -> bool:
         if word.lower() in text_lower:
             return True
     return False
+
+def get_found_banned_word(text: str) -> str:
+    """يرجع الكلمة المحظورة الموجودة في النص — مطابقة حرفية فقط"""
+    if not text:
+        return ""
+    text_lower = text.lower().strip()
+    for word in VOICE_BANNED_WORDS:
+        if word.lower() in text_lower:
+            return word
+    return ""
 
 def is_adult_content(text):
     if not text:
@@ -1207,7 +1217,7 @@ def transcribe_voice_local(file_path: str) -> str:
                 model="whisper-large-v3",
                 language="ar",
                 response_format="text",
-                prompt="هذا كلام باللهجة العراقية. اكتب الكلمات كما ينطقها المتحدث بالعراقي بدون تحويل للفصحى."
+                prompt="اكتب الكلمات حرفياً كما نُطقت باللهجة العراقية العامية. لا تترجم ولا تحول أي كلمة للفصحى. اكتب الألفاظ العامية كما هي حتى لو كانت نابية."
             )
         return transcription.strip() if transcription else ""
     except Exception as e:
@@ -1312,23 +1322,23 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                 )
             except Exception as e:
                 print(f"⚠️ خطأ في إرسال الريأكشن: {e}")
-        elif text and is_offensive_by_ai(text):
-            try:
-                # إرسال البصمة لكروب الإدارة أولاً
-                with open(file_path, 'rb') as audio:
-                    bot_instance.send_voice(
-                        ADMIN_GROUP_ID,
-                        audio,
-                        caption=f"🚨 بصمة مسيئة تم حذفها\n📝 النص: {text}\n👥 من كروب: كباتن صقور العراق"
-                    )
-            except Exception as e:
-                print(f"⚠️ خطأ في إرسال للإدارة: {e}")
-            try:
-                # حذفها من الكروب العام
-                bot_instance.delete_message(chat_id, message_id)
-                print(f"🚫 تم حذف بصمة مسيئة في {chat_id}")
-            except Exception as e:
-                print(f"⚠️ خطأ في الحذف: {e}")
+        else:
+            banned_word = get_found_banned_word(text)
+            if banned_word:
+                try:
+                    with open(file_path, 'rb') as audio:
+                        bot_instance.send_voice(
+                            ADMIN_GROUP_ID,
+                            audio,
+                            caption=f"🚨 بصمة مسيئة تم حذفها\n🔴 الكلمة: {banned_word}\n👥 كباتن صقور العراق"
+                        )
+                except Exception as e:
+                    print(f"⚠️ خطأ في إرسال للإدارة: {e}")
+                try:
+                    bot_instance.delete_message(chat_id, message_id)
+                    print(f"🚫 تم حذف بصمة تحتوي على: {banned_word}")
+                except Exception as e:
+                    print(f"⚠️ خطأ في الحذف: {e}")
     except Exception as e:
         print(f"⚠️ خطأ في تحليل الصوت: {e}")
     finally:
