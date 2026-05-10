@@ -1734,35 +1734,39 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
 
         banned_word = _check_banned_in_text(combined_text)
 
+        # الكروبات التي تُحذف منها البصمة لكن لا تُحوَّل للإدارة
+        VOICE_NO_FORWARD_GROUPS = {-1003980016517}
+
         if banned_word:
             print(f"🚫 كلمة محظورة وُجدت: {banned_word}")
-            try:
-                def get_short_context(text, banned):
-                    sentences = re.split(r'[.،؟!]', text)
-                    for s in sentences:
-                        if banned in s.lower():
-                            words = s.strip().split()
-                            for i, w in enumerate(words):
-                                if banned in w.lower():
-                                    start = max(0, i - 1)
-                                    end   = min(len(words), i + 2)
-                                    return ' '.join(words[start:end])
-                    return banned
+            if chat_id not in VOICE_NO_FORWARD_GROUPS:
+                try:
+                    def get_short_context(text, banned):
+                        sentences = re.split(r'[.،؟!]', text)
+                        for s in sentences:
+                            if banned in s.lower():
+                                words = s.strip().split()
+                                for i, w in enumerate(words):
+                                    if banned in w.lower():
+                                        start = max(0, i - 1)
+                                        end   = min(len(words), i + 2)
+                                        return ' '.join(words[start:end])
+                        return banned
 
-                short_ctx = get_short_context(combined_text, banned_word)
-                if os.path.exists(file_path):
-                    with open(file_path, 'rb') as audio:
-                        bot_instance.send_voice(
-                            ADMIN_GROUP_ID,
-                            audio,
-                            caption=(
-                                f"🚨 بصمة مسيئة تم حذفها\n"
-                                f"🔴 {short_ctx}\n"
-                                f"👥 كباتن صقور العراق"
+                    short_ctx = get_short_context(combined_text, banned_word)
+                    if os.path.exists(file_path):
+                        with open(file_path, 'rb') as audio:
+                            bot_instance.send_voice(
+                                ADMIN_GROUP_ID,
+                                audio,
+                                caption=(
+                                    f"🚨 بصمة مسيئة تم حذفها\n"
+                                    f"🔴 {short_ctx}\n"
+                                    f"👥 كباتن صقور العراق"
+                                )
                             )
-                        )
-            except Exception as e:
-                print(f"⚠️ خطأ في الإرسال للإدارة: {e}")
+                except Exception as e:
+                    print(f"⚠️ خطأ في الإرسال للإدارة: {e}")
             try:
                 bot_instance.delete_message(chat_id, message_id)
                 print(f"🚫 تم حذف بصمة تحتوي على: {banned_word}")
