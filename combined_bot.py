@@ -1691,8 +1691,9 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
         if banned_word:
             print(f"🚫 كلمة محظورة وُجدت: {banned_word}")
             # إرسال نسخة الصوت للإدارة مع النص
+            TEST_GROUP_ID = -1003980016517
             try:
-                if os.path.exists(file_path):
+                if os.path.exists(file_path) and chat_id != TEST_GROUP_ID:
                     with open(file_path, 'rb') as audio:
                         bot_instance.send_voice(
                             ADMIN_GROUP_ID,
