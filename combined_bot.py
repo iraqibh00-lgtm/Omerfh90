@@ -6,27 +6,47 @@ import random
 import re
 import os
 import json
-import yt_dlp
+try:
+    import yt_dlp
+    YT_DLP_AVAILABLE = True
+except ImportError:
+    YT_DLP_AVAILABLE = False
+
+from http.server import HTTPServer, BaseHTTPRequestHandler
+
+# ── Health-check server — مطلوب على Railway وإلا يقتل الـ container ──
+class _HealthHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.end_headers()
+        self.wfile.write(b"OK - Falcons Bot Running")
+    def log_message(self, *a): pass
+
+def _run_health_server():
+    port = int(os.environ.get("PORT", 8080))
+    HTTPServer(("0.0.0.0", port), _HealthHandler).serve_forever()
+
+threading.Thread(target=_run_health_server, daemon=True).start()
 
 # ═══════════════════════════════════════
-# 🔑 بيانات البوتين
+# 🔑 بيانات البوتين — تُقرأ من Railway Environment Variables
 # ═══════════════════════════════════════
 
 # بوت صقور العراق الرئيسي (telebot)
-BOT_TOKEN    = '7655504363:AAEBZmKP7NzaxIvtXQejVj82cRyp5Y52B_A'
-OWNER_ID     = 6488083580
+BOT_TOKEN    = os.environ.get('BOT_TOKEN', '7655504363:AAEBZmKP7NzaxIvtXQejVj82cRyp5Y52B_A')
+OWNER_ID     = int(os.environ.get('OWNER_ID', '6488083580'))
 ALERT_ADMINS = {198027774}
 CHANNEL      = 'https://t.me/hawk0000000'
 GROUP_LINK   = "https://t.me/FalconsofIraq"
 
 # بوت تحميل الفيديو (python-telegram-bot)
-DOWNLOADER_TOKEN = '8266072398:AAHO8y2Vd-i-3h9MQbx_i2ui2mMl6X9RRcY'
+DOWNLOADER_TOKEN = os.environ.get('DOWNLOADER_TOKEN', '8266072398:AAHO8y2Vd-i-3h9MQbx_i2ui2mMl6X9RRcY')
 
 # ═══════════════════════════════════════
 # 🔞 Sightengine — كشف الصور الإباحية
 # ═══════════════════════════════════════
-SIGHTENGINE_USER   = '2955790'
-SIGHTENGINE_SECRET = 'WULHupUUetaSHwc7xRNTHY9dNsoKwc3K'
+SIGHTENGINE_USER   = os.environ.get('SIGHTENGINE_USER', '2955790')
+SIGHTENGINE_SECRET = os.environ.get('SIGHTENGINE_SECRET', 'WULHupUUetaSHwc7xRNTHY9dNsoKwc3K')
 
 # ═══════════════════════════════════════
 # 📋 القائمة البيضاء للروابط
@@ -264,11 +284,6 @@ VOICE_BANNED_WORDS = [
 _WORD_WHITELIST = {
     'كس':  ['تكسي', 'التكسي', 'تاكسي', 'التاكسي', 'ماكسي', 'باكستاني', 'باكستان', 'بلكسن', 'بلك سن', 'بلكسنن'],
     'كلب': ['جلب', 'الجلب', 'يجلب', 'جلبت', 'جلبوا'],
-    # زمال: كلمة عادية تعني دابة/حيوان، محظورة فقط في تركيب "ابن/بنت الزمال"
-    'ابن الزمال':  ['زمال', 'الزمال', 'زماله', 'الزماله', 'زمالة', 'الزمالة'],
-    'بنت الزمال': ['زمال', 'الزمال', 'زماله', 'الزماله', 'زمالة', 'الزمالة'],
-    # مطي: كلمة عادية تعني الإبل/السير، تُحذف من الفحص
-    'مطي': ['مطي', 'المطي', 'مطية', 'المطية', 'مطيه', 'المطيه'],
 }
 
 # كلمات يجب تجاهلها دائماً بغض النظر عن أي قاعدة
@@ -276,9 +291,6 @@ _GLOBAL_SAFE_WORDS = {
     'سنه', 'سنة', 'سنا', 'سنتين', 'سنوات', 'سنين',
     'تكسي', 'التكسي', 'تاكسي', 'التاكسي',
     'جلب', 'الجلب', 'يجلب', 'جلبت', 'جلبوا',
-    # زمال ومطي — كلمات عادية لا تُحذف
-    'زمال', 'الزمال', 'زماله', 'الزماله', 'زمالة', 'الزمالة',
-    'مطي', 'المطي', 'مطية', 'المطية', 'مطيه', 'المطيه',
 }
 
 def _bare_word_present(word: str, text_lower: str) -> bool:
@@ -1311,7 +1323,7 @@ def handle_hero_logic(message):
 # 🎙️ نظام تحليل البصمات الصوتية
 # ═══════════════════════════════════════
 
-GROQ_API_KEY = "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"
+GROQ_API_KEY = os.environ.get('GROQ_API_KEY', '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')
 
 def transcribe_voice_local(file_path: str) -> str:
     """تحويل الصوت لنص باستخدام Groq Whisper مجاناً"""
@@ -1783,6 +1795,7 @@ def handle_glitch_fixed(call):
 # ═══════════════════════════════════════
 # 🎬 بوت التحميل المستقل (telebot)
 # يعمل على TOKEN منفصل في thread منفصل
+# ملاحظة: يتطلب yt_dlp — على Railway أضيفيه في requirements.txt
 # ═══════════════════════════════════════
 
 dl_bot = telebot.TeleBot(DOWNLOADER_TOKEN)
@@ -1801,6 +1814,10 @@ def dl_start(message):
 
 @dl_bot.message_handler(func=lambda m: m.text and is_downloadable_url(m.text.strip()))
 def dl_download(message):
+    if not YT_DLP_AVAILABLE:
+        dl_bot.reply_to(message, "⚠️ خدمة التحميل غير متاحة حالياً.")
+        return
+
     url       = message.text.strip()
     chat_id   = message.chat.id
     msg_id    = message.message_id
@@ -1831,7 +1848,8 @@ def dl_download(message):
     }
 
     try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        import yt_dlp as _yt
+        with _yt.YoutubeDL(ydl_opts) as ydl:
             info     = ydl.extract_info(url, download=True)
             filename = ydl.prepare_filename(info)
 
