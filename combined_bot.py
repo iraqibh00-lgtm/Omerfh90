@@ -1311,24 +1311,7 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
     try:
         text = transcribe_voice_local(file_path)
         print(f"📝 نص البصمة: {text}")
-        if text and is_offensive_by_ai(text):
-            try:
-                # إرسال البصمة لكروب الإدارة أولاً
-                with open(file_path, 'rb') as audio:
-                    bot_instance.send_voice(
-                        ADMIN_GROUP_ID,
-                        audio,
-                        caption=f"🚨 بصمة مسيئة تم حذفها\n📝 النص: {text}\n👥 من كروب: كباتن صقور العراق"
-                    )
-            except Exception as e:
-                print(f"⚠️ خطأ في إرسال للإدارة: {e}")
-            try:
-                # حذفها من الكروب العام
-                bot_instance.delete_message(chat_id, message_id)
-                print(f"🚫 تم حذف بصمة مسيئة في {chat_id}")
-            except Exception as e:
-                print(f"⚠️ خطأ في الحذف: {e}")
-        elif text and contains_uber_pay_question(text):
+        if text and contains_uber_pay_question(text):
             try:
                 bot_instance.send_video(
                     chat_id,
@@ -1357,6 +1340,23 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                 )
             except Exception as e:
                 print(f"⚠️ خطأ في إرسال الريأكشن: {e}")
+        elif text and is_offensive_by_ai(text):
+            try:
+                # إرسال البصمة لكروب الإدارة أولاً
+                with open(file_path, 'rb') as audio:
+                    bot_instance.send_voice(
+                        ADMIN_GROUP_ID,
+                        audio,
+                        caption=f"🚨 بصمة مسيئة تم حذفها\n📝 النص: {text}\n👥 من كروب: كباتن صقور العراق"
+                    )
+            except Exception as e:
+                print(f"⚠️ خطأ في إرسال للإدارة: {e}")
+            try:
+                # حذفها من الكروب العام
+                bot_instance.delete_message(chat_id, message_id)
+                print(f"🚫 تم حذف بصمة مسيئة في {chat_id}")
+            except Exception as e:
+                print(f"⚠️ خطأ في الحذف: {e}")
     except Exception as e:
         print(f"⚠️ خطأ في تحليل الصوت: {e}")
     finally:
