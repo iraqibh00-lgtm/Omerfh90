@@ -1317,9 +1317,8 @@ def transcribe_voice_local(file_path: str) -> str:
             language="ar",
             response_format="text",
             prompt=(
-                "اكتب كل كلمة حرفياً كما نُطقت باللهجة العراقية العامية بدون أي تعديل أو حذف. "
-                "لا تحذف أي كلمة مهما كانت نابية أو قبيحة. لا تضع نجوم أو نقاط بدل الكلمات. "
-                "اكتب الكلمات مثل كس وطيز وعير وكلب وشرموطة حرفياً كما نُطقت."
+                "اكتب كل كلمة حرفياً كما نُطقت باللهجة العراقية العامية "
+                "بدون أي تعديل أو حذف أو رقابة ذاتية."
             )
         )
         text1 = t1.strip() if t1 else ""
@@ -1345,9 +1344,8 @@ def transcribe_voice_local(file_path: str) -> str:
                     language="ar",
                     response_format="text",
                     prompt=(
-                        "اكتب كل كلمة حرفياً كما نُطقت. "
-                        "لا تحذف أي كلمة مهما كانت نابية. "
-                        "كس وطيز وعير وكلب — اكتبها كما هي."
+                        "اكتب كل كلمة حرفياً كما نُطقت باللهجة العراقية "
+                        "بدون تعديل."
                     )
                 )
                 text2 = t2.strip() if t2 else ""
@@ -1516,7 +1514,7 @@ UBER_TRIPS_TRIGGERS = [
 def _normalize_arabic(text: str) -> str:
     if not text:
         return ""
-    text = re.sub(r'[أإآا][\s\.]*[ؤو][\s\.]*ب[\s\.]*ر', 'اوبر', text)
+    text = re.sub(r'[أإآا][\s\.]*[ؤو][\s\.]*ب[\s\.]*[اأآ][\s\.]*ر', 'اوبر', text)
     text = re.sub(r'[أإآا][\s\.]*ب[\s\.]*[اأآ][\s\.]*ر', 'اوبر', text)
     text = re.sub(r'[أإآا][\s\.]*ب[\s\.]*ر', 'اوبر', text)
     text = re.sub(r'u[\s\.]?b[\s\.]?e[\s\.]?r', 'اوبر', text, flags=re.IGNORECASE)
@@ -1637,37 +1635,23 @@ def contains_greeting(text: str) -> bool:
 # ═══════════════════════════════════════
 
 def _check_banned_in_text(text: str) -> str:
-    """
-    يفحص النص بثلاث طرق لضمان اكتشاف الكلمات المسيئة
-    حتى لو كانت في نهاية البصمة أو ملصوقة بكلمات أخرى.
-    يرجع الكلمة المحظورة أو نص فارغ.
-    """
     if not text:
         return ""
-
-    # الطريقة 1: النص كاملاً
     found = get_found_banned_word(text)
     if found:
         return found
-
-    # الطريقة 2: كل كلمة منفردة (للكلمات الملصوقة)
     for word in text.split():
         found = get_found_banned_word(word)
         if found:
             return found
-
-    # الطريقة 3: النصف الثاني من النص (التركيز على النهاية)
     half = len(text) // 2
     found = get_found_banned_word(text[half:])
     if found:
         return found
-
     return ""
 
 def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
-    """تحليل البصمة الصوتية كاملة وحذفها إذا احتوت على كلمات محظورة"""
     try:
-        # تحويل الصوت — محاولتان (كاملة + آخر 10 ثواني)
         combined_text = transcribe_voice_local(file_path)
         print(f"📝 النص النهائي للفحص: {combined_text}")
 
@@ -1685,15 +1669,12 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
             except Exception as e:
                 print(f"⚠️ خطأ في إرسال فيديو {label}: {e}")
 
-        # ── فحص الكلمات المحظورة بثلاث طرق ──
         banned_word = _check_banned_in_text(combined_text)
 
         if banned_word:
             print(f"🚫 كلمة محظورة وُجدت: {banned_word}")
-            # إرسال نسخة الصوت للإدارة مع النص
-            TEST_GROUP_ID = -1003980016517
             try:
-                if os.path.exists(file_path) and chat_id != TEST_GROUP_ID:
+                if os.path.exists(file_path):
                     with open(file_path, 'rb') as audio:
                         bot_instance.send_voice(
                             ADMIN_GROUP_ID,
@@ -1701,20 +1682,19 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                             caption=(
                                 f"🚨 بصمة مسيئة تم حذفها\n"
                                 f"🔴 الكلمة: {banned_word}\n"
+                                f"📝 النص: {combined_text}\n"
                                 f"👥 كباتن صقور العراق"
                             )
                         )
             except Exception as e:
                 print(f"⚠️ خطأ في الإرسال للإدارة: {e}")
-            # حذف البصمة من المجموعة
             try:
                 bot_instance.delete_message(chat_id, message_id)
                 print(f"🚫 تم حذف بصمة تحتوي على: {banned_word}")
             except Exception as e:
                 print(f"⚠️ خطأ في الحذف: {e}")
-            return  # انتهى — لا تكمل لفحوصات الأوبر
+            return
 
-        # ── فحوصات الأسئلة والتحيات فقط إذا لم توجد كلمة محظورة ──
         if contains_uber_pay_question(combined_text):
             send_video('uber_pay', 'تسديد أوبر')
         elif contains_uber_withdraw_question(combined_text):
@@ -1746,7 +1726,6 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
     content_types=['voice']
 )
 def handle_group_voice(message):
-    """معالج البصمات الصوتية في المجموعات"""
     chat_id    = message.chat.id
     message_id = message.message_id
     try:
