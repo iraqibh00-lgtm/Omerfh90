@@ -1218,9 +1218,28 @@ ADMIN_GROUP_ID = -1003746150788
 GREETING_WORDS = [
     'صباح الخير', 'مساء الخير', 'شلونكم', 'شلونك',
     'يسعد صباحكم', 'يسعد مسائكم', 'يسعد صباحك', 'يسعد مساءك',
+    'صباحكم خير', 'صبحكم الله بالخير', 'صبحكم بالخير',
+    'السلام عليكم شلونكم', 'السلام عليكم',
+    'يسعد صباحكم', 'مرحبا', 'هلا', 'أهلاً', 'اهلا',
+    'تصبحون على خير', 'تمسون على خير',
 ]
 
-def contains_greeting(text: str) -> bool:
+UBER_PAY_TRIGGERS = [
+    'طريقة تسديد اوبر', 'كيف تسديد اوبر', 'شلون اسدد اوبر',
+    'شلون طريقة تسديد اوبر', 'ماعرف اسدد اوبر', 'ما اعرف اسدد اوبر',
+    'كيف طريقة تسديد اوبر', 'اخوان شلون اسدد اوبر',
+    'تسديد اوبر', 'كيف اسدد اوبر',
+]
+
+def contains_uber_pay_question(text: str) -> bool:
+    """يتحقق إذا النص يحتوي على سؤال عن تسديد أوبر"""
+    if not text:
+        return False
+    text_lower = text.lower().strip()
+    for phrase in UBER_PAY_TRIGGERS:
+        if phrase.lower() in text_lower:
+            return True
+    return False
     """يتحقق إذا النص يحتوي على تحية"""
     if not text:
         return False
@@ -1252,6 +1271,16 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                 print(f"🚫 تم حذف بصمة مسيئة في {chat_id}")
             except Exception as e:
                 print(f"⚠️ خطأ في الحذف: {e}")
+        elif text and contains_uber_pay_question(text):
+            try:
+                bot_instance.send_video(
+                    chat_id,
+                    FIXED_VIDEOS['uber_pay'],
+                    caption=CHANNEL,
+                    reply_to_message_id=message_id
+                )
+            except Exception as e:
+                print(f"⚠️ خطأ في إرسال فيديو تسديد أوبر: {e}")
         elif text and contains_greeting(text):
             try:
                 bot_instance.set_message_reaction(
