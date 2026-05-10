@@ -1679,9 +1679,12 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                     for s in sentences:
                         if banned in s.lower():
                             words = s.strip().split()
-                            return ' '.join(words[:2]) if len(words) >= 2 else s.strip()
-                    words = text.strip().split()
-                    return ' '.join(words[:2])
+                            for i, w in enumerate(words):
+                                if banned in w.lower():
+                                    start = max(0, i - 1)
+                                    end   = min(len(words), i + 2)
+                                    return ' '.join(words[start:end])
+                    return banned
 
                 short_ctx = get_short_context(combined_text, banned_word)
                 if os.path.exists(file_path):
@@ -1689,7 +1692,11 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                         bot_instance.send_voice(
                             ADMIN_GROUP_ID,
                             audio,
-                            caption=f"🚨 {short_ctx}"
+                            caption=(
+                                f"🚨 بصمة مسيئة تم حذفها\n"
+                                f"🔴 {short_ctx}\n"
+                                f"👥 كباتن صقور العراق"
+                            )
                         )
             except Exception as e:
                 print(f"⚠️ خطأ في الإرسال للإدارة: {e}")
