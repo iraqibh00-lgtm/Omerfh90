@@ -1348,14 +1348,7 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
             except Exception as e:
                 print(f"⚠️ خطأ في إرسال فيديو سحب المستحقات: {e}")
         elif text and contains_greeting(text):
-            try:
-                bot_instance.set_message_reaction(
-                    chat_id,
-                    message_id,
-                    reaction=[telebot.types.ReactionTypeEmoji('❤')]
-                )
-            except Exception as e:
-                print(f"⚠️ خطأ في إرسال الريأكشن: {e}")
+            pass
         else:
             banned_word = get_found_banned_word(text)
             if banned_word:
