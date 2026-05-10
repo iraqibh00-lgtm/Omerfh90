@@ -1272,8 +1272,9 @@ GREETING_WORDS = [
 UBER_PAY_TRIGGERS = [
     'طريقة تسديد اوبر', 'كيف تسديد اوبر', 'شلون اسدد اوبر',
     'شلون طريقة تسديد اوبر', 'ماعرف اسدد اوبر', 'ما اعرف اسدد اوبر',
+    'ما أعرف اسدد اوبر', 'ماأعرف اسدد اوبر',
     'كيف طريقة تسديد اوبر', 'اخوان شلون اسدد اوبر',
-    'تسديد اوبر', 'كيف اسدد اوبر',
+    'تسديد اوبر', 'كيف اسدد اوبر', 'اريد اسدد اوبر',
 ]
 
 UBER_WITHDRAW_TRIGGERS = [
@@ -1288,13 +1289,26 @@ UBER_WITHDRAW_TRIGGERS = [
     'مستحقات اوبر', 'سحب المستحقات',
 ]
 
+def _normalize_arabic(text: str) -> str:
+    """يوحّد كتابة الحروف العربية لتجنب فروق الهمزات والألف والتاء"""
+    if not text:
+        return ""
+    # توحيد الهمزات
+    text = re.sub(r'[أإآا]', 'ا', text)
+    text = re.sub(r'[ةه]', 'ه', text)
+    text = re.sub(r'[يى]', 'ي', text)
+    text = re.sub(r'[ؤو]', 'و', text)
+    # حذف التشكيل
+    text = re.sub(r'[\u064B-\u065F]', '', text)
+    return text.lower().strip()
+
 def contains_uber_withdraw_question(text: str) -> bool:
     """يتحقق إذا النص يحتوي على سؤال عن سحب مستحقات أوبر"""
     if not text:
         return False
-    text_lower = text.lower().strip()
+    norm = _normalize_arabic(text)
     for phrase in UBER_WITHDRAW_TRIGGERS:
-        if phrase.lower() in text_lower:
+        if _normalize_arabic(phrase) in norm:
             return True
     return False
 
@@ -1302,9 +1316,9 @@ def contains_uber_pay_question(text: str) -> bool:
     """يتحقق إذا النص يحتوي على سؤال عن تسديد أوبر"""
     if not text:
         return False
-    text_lower = text.lower().strip()
+    norm = _normalize_arabic(text)
     for phrase in UBER_PAY_TRIGGERS:
-        if phrase.lower() in text_lower:
+        if _normalize_arabic(phrase) in norm:
             return True
     return False
 
