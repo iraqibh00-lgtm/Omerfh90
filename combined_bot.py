@@ -1270,39 +1270,155 @@ GREETING_WORDS = [
 ]
 
 UBER_PAY_TRIGGERS = [
-    'طريقة تسديد اوبر', 'كيف تسديد اوبر', 'شلون اسدد اوبر', 'شلون اصدد اوبر',
+    # فصحى / عامة
+    'تسديد اوبر', 'طريقة تسديد اوبر', 'كيف تسديد اوبر',
+    'كيف اسدد اوبر', 'اريد اسدد اوبر',
+    'كيف يمكنني تسديد اوبر', 'كيف يمكنني الدفع لاوبر',
+    # شلون
+    'شلون اسدد اوبر', 'شلون اصدد اوبر',
     'شلون طريقة تسديد اوبر', 'شلون طريقه تسديد اوبر',
+    'اخوان شلون اسدد اوبر', 'شباب شلون اسدد اوبر',
+    # ماعرف / مو عارف
     'ماعرف اسدد اوبر', 'ما اعرف اسدد اوبر',
-    'ما أعرف اسدد اوبر', 'ماأعرف اسدد اوبر',
-    'كيف طريقة تسديد اوبر', 'كيف طريقه تسديد اوبر',
-    'اخوان شلون اسدد اوبر',
-    'تسديد اوبر', 'كيف اسدد اوبر', 'اريد اسدد اوبر',
-    'تسديد ابر', 'شلون اسدد ابر', 'شلون اصدد ابر',
-    'طريقة تسديد ابر', 'طريقه تسديد ابر',
-    'تسديد اوبر', 'شلون اسدد اوبر', 'شلون اصدد اوبر',
-    'كيف يمكنني تسديد اوبر', 'كيف يمكنني اسدد اوبر',
-    'كيف يمكنني تسديد ابر', 'كيف يمكنني الدفع لاوبر',
+    'مو عارف اسدد اوبر', 'مو عارف كيف اسدد',
+    'ما اعرف كيف اسدد', 'ماعرف كيف اسدد',
+    # ابر بدل اوبر
+    'تسديد ابر', 'شلون اسدد ابر', 'طريقة تسديد ابر',
+    # دفع
+    'شلون ادفع اوبر', 'كيف ادفع اوبر', 'ادفع اوبر',
+    'طريقة الدفع اوبر', 'الدفع لاوبر',
+    # عراقي صريح
+    'شلون اخلص ذمتي باوبر', 'شلون اخلص ذمتي',
+    'اوبر تريد فلوس', 'اوبر تطلب فلوس',
+    'عندي مبلغ باوبر', 'عندي ديون باوبر',
+    'شلون اسوي تسديد', 'اسوي تسديد اوبر',
 ]
 
 UBER_WITHDRAW_TRIGGERS = [
-    'طريقة سحب مستحقات اوبر', 'شلون اسحب فلوسي',
-    'شلون اسحب فلوسي باوبر', 'شلون اسحب فلوسي بأوبر',
-    'طريقة سحب الفلوس من اوبر', 'احد يعرف شلون اسحب فلوسي',
-    'شباب شلون اسحب فلوسي', 'سحب مستحقات اوبر',
+    # فصحى / عامة
+    'سحب مستحقات اوبر', 'طريقة سحب مستحقات اوبر',
     'سحب الفلوس اوبر', 'كيف اسحب من اوبر',
-    'شلون اسحب من اوبر', 'طريقة السحب اوبر',
-    'اسحب فلوسي', 'سحب فلوسي', 'اسحب من اوبر',
-    'سحب اوبر', 'فلوسي باوبر', 'فلوسي بأوبر',
-    'مستحقات اوبر', 'سحب المستحقات',
+    'طريقة السحب اوبر', 'سحب المستحقات',
+    # شلون
+    'شلون اسحب فلوسي', 'شلون اسحب فلوسي باوبر',
+    'شباب شلون اسحب فلوسي', 'اخوان شلون اسحب فلوسي',
+    'احد يعرف شلون اسحب فلوسي',
+    # فلوسي / مستحقاتي
+    'فلوسي باوبر', 'فلوسي بأوبر', 'اسحب فلوسي',
+    'مستحقات اوبر', 'سحب اوبر',
+    # عراقي صريح
+    'شلون اطلع فلوسي من اوبر', 'شلون اشيل فلوسي من اوبر',
+    'اريد اشيل فلوسي', 'اريد اطلع فلوسي',
+    'فلوسي محجوزه باوبر', 'فلوسي محبوسه باوبر',
+    'ارباحي باوبر', 'شلون اسحب ارباحي',
+    'اموالي باوبر', 'شلون اطلع اموالي',
+    'حسابي باوبر فيه فلوس', 'شلون اسحب من حسابي',
+]
+
+UBER_CAREEM_TRIGGERS = [
+    # فصحى / عامة
+    'ربط كريم', 'ربط كريم باوبر', 'ربط كريم في اوبر',
+    'طريقة ربط كريم', 'كريم واوبر', 'كريم في اوبر',
+    # شلون / كيف
+    'شلون اربط كريم', 'كيف اربط كريم',
+    'شلون اربط كريم باوبر', 'شلون اربط كريم في اوبر',
+    # عراقي صريح
+    'شلون اوصل كريم باوبر', 'شلون اوصل كريم',
+    'اربط كريم باوبر', 'اربط كريم في اوبر',
+    'شلون اخلي كريم يشتغل باوبر',
+    'كريم واوبر وين اربطهم', 'شباب كريم واوبر',
+    'عندي كريم شلون اربطه', 'عندي حساب كريم',
+    'شلون اضيف كريم', 'اضيف كريم باوبر',
+]
+
+UBER_MASTER_TRIGGERS = [
+    # فصحى / عامة
+    'ربط الماستر', 'ربط ماستر', 'ربط الماستر باوبر',
+    'طريقة ربط الماستر', 'ربط ماستر كارد',
+    'اضافة ماستر', 'اضافة الماستر',
+    # شلون / كيف
+    'شلون اربط الماستر', 'كيف اربط الماستر',
+    'شلون اربط الماستر باوبر', 'شلون اربط ماستر باوبر',
+    # عراقي صريح
+    'شلون اضيف الماستر', 'شلون اضيف ماستر كارد',
+    'اضيف الماستر باوبر', 'اضيف ماستر باوبر',
+    'شلون اوصل الماستر', 'شلون اوصل البطاقه',
+    'ماستر كارد اوبر', 'بطاقتي باوبر',
+    'شلون اربط بطاقتي', 'اربط بطاقتي باوبر',
+    'شلون اضيف بطاقه', 'اضيف بطاقه باوبر',
+    'شلون اشغل الماستر باوبر', 'الماستر مو شغال باوبر',
+]
+
+UBER_CANCEL_TRIGGERS = [
+    # فصحى / عامة
+    'تعويض الغاء', 'تعويض الالغاء', 'تعويض الرحله',
+    'احصل على تعويض', 'اطلب تعويض',
+    # شلون / كيف
+    'شلون احصل تعويض', 'كيف احصل تعويض',
+    'شلون اطلب تعويض', 'كيف اطلب تعويض',
+    # عراقي صريح
+    'الزبون الغى الرحله', 'الزبون كنسل',
+    'الزبون كنسل علي', 'الكاستمر كنسل',
+    'شلون استرد فلوسي', 'استرد فلوسي من اوبر',
+    'الرحله انكنسلت', 'الرحله اتلغت',
+    'رحلتي انلغت شلون', 'رحلتي اتكنسلت',
+    'شلون احصل على حقي', 'حقي من الغاء الرحله',
+    'الغو الرحله علي', 'كنسلوا علي',
+    'شلون اشتكي على زبون الغى', 'اشتكي على كنسل',
+    'زبون كنسل شلون اخذ فلوسي',
+]
+
+UBER_SUPPORT_TRIGGERS = [
+    # فصحى / عامة
+    'دعم اوبر', 'كول سنتر اوبر', 'خدمة عملاء اوبر',
+    'التواصل مع اوبر', 'اراسل الدعم', 'اراسل اوبر',
+    # شلون / كيف
+    'شلون اراسل الدعم', 'كيف اراسل الدعم',
+    'شلون اراسل اوبر', 'كيف اراسل اوبر',
+    'شلون اراسل الكول سنتر', 'شلون اراسل الشركه',
+    'شلون اتواصل مع اوبر', 'كيف اتواصل مع اوبر',
+    # عراقي صريح
+    'شلون احجي مع اوبر', 'شلون اكلم اوبر',
+    'اكلم اوبر', 'احجي مع اوبر', 'احجي مع الشركه',
+    'شلون اكلم الكول سنتر', 'اكلم الكول سنتر',
+    'وين الدعم مال اوبر', 'وين كول سنتر اوبر',
+    'شلون اراسل دعم اوبر', 'اراسل دعم اوبر',
+    'شلون افتح تذكره', 'افتح تذكره باوبر',
+    'شلون ارفع شكوى', 'ارفع شكوى باوبر',
+    'عندي مشكله باوبر شلون', 'عندي مشكلة باوبر',
+    'شلون اشتكي باوبر', 'اشتكي باوبر',
+]
+
+UBER_TRIPS_TRIGGERS = [
+    # فصحى / عامة
+    'تفاصيل الرحله', 'تفاصيل الرحلة', 'سجل الرحلات',
+    'تاريخ الرحلات', 'تفاصيل رحلاتي',
+    # شلون / كيف
+    'شلون اعرف تفاصيل الرحله', 'كيف اعرف تفاصيل الرحله',
+    'شلون اطلع الرحله', 'كيف اطلع الرحله',
+    'شلون اشوف الرحله', 'كيف اشوف الرحله',
+    # عراقي صريح
+    'هاي رحله شلون اطلعها', 'هاي رحلة شلون اطلعها',
+    'شلون اشوف رحلاتي', 'اشوف رحلاتي',
+    'شلون اطلع رحلاتي', 'اطلع رحلاتي',
+    'رحلاتي وين اشوفها', 'رحلاتي وين اطلعها',
+    'شلون اعرف كم رحله سويت', 'كم رحله سويت',
+    'شلون اشوف تفاصيل رحله قديمه',
+    'الرحله الفلانيه شلون اطلع تفاصيلها',
+    'فلوس الرحله وين اشوفها', 'كم اخذت من الرحله',
+    'شلون اعرف كم اخذت', 'اعرف كم ربحت',
 ]
 
 def _normalize_arabic(text: str) -> str:
     """يوحّد كتابة الحروف العربية لتجنب فروق الهمزات والألف والتاء"""
     if not text:
         return ""
-    # معالجة خاصة لكلمة أوبر/أؤبر/ابر
-    text = re.sub(r'[أإآا][ؤو]بر', 'اوبر', text)
-    text = re.sub(r'[أإآا]بر', 'اوبر', text)
+    # توحيد كل كتابات أوبر → اوبر
+    # يغطي: اوبر / أوبر / آوبر / اُوبر / أُوبر / أؤبر / ابر / أبر / آبار / ا.ب.ر / أ.ب.ر
+    text = re.sub(r'[أإآا][\s\.]*[ؤو][\s\.]*ب[\s\.]*ر', 'اوبر', text)  # أوبر / أؤبر
+    text = re.sub(r'[أإآا][\s\.]*ب[\s\.]*[اأآ][\s\.]*ر', 'اوبر', text)  # آبار / ابار
+    text = re.sub(r'[أإآا][\s\.]*ب[\s\.]*ر', 'اوبر', text)               # ابر / أبر
+    text = re.sub(r'u[\s\.]?b[\s\.]?e[\s\.]?r', 'اوبر', text, flags=re.IGNORECASE)  # uber
     # توحيد الهمزات
     text = re.sub(r'[أإآا]', 'ا', text)
     text = re.sub(r'[ةه]', 'ه', text)
@@ -1317,9 +1433,15 @@ def contains_uber_withdraw_question(text: str) -> bool:
     if not text:
         return False
     norm = _normalize_arabic(text)
+    # طريقة 1: مطابقة العبارات الحرفية
     for phrase in UBER_WITHDRAW_TRIGGERS:
         if _normalize_arabic(phrase) in norm:
             return True
+    # طريقة 2: وجود كلمة أوبر + كلمة سحب معاً (يغطي أي صياغة من Whisper)
+    has_uber = 'اوبر' in norm
+    has_withdraw = any(w in norm for w in ['سحب', 'اسحب', 'مستحقات', 'فلوس', 'ارباح', 'السحب'])
+    if has_uber and has_withdraw:
+        return True
     return False
 
 def contains_uber_pay_question(text: str) -> bool:
@@ -1330,6 +1452,81 @@ def contains_uber_pay_question(text: str) -> bool:
     for phrase in UBER_PAY_TRIGGERS:
         if _normalize_arabic(phrase) in norm:
             return True
+    has_uber = 'اوبر' in norm
+    has_pay  = any(w in norm for w in ['تسديد', 'اسدد', 'اصدد', 'دفع', 'سدد', 'التسديد', 'الدفع'])
+    if has_uber and has_pay:
+        return True
+    return False
+
+def contains_uber_careem_question(text: str) -> bool:
+    """يتحقق إذا النص يحتوي على سؤال عن ربط كريم بأوبر"""
+    if not text:
+        return False
+    norm = _normalize_arabic(text)
+    for phrase in UBER_CAREEM_TRIGGERS:
+        if _normalize_arabic(phrase) in norm:
+            return True
+    has_careem = 'كريم' in norm
+    has_uber   = 'اوبر' in norm
+    has_link   = any(w in norm for w in ['ربط', 'اربط', 'توصيل', 'وصل'])
+    if has_careem and (has_uber or has_link):
+        return True
+    return False
+
+def contains_uber_master_question(text: str) -> bool:
+    """يتحقق إذا النص يحتوي على سؤال عن ربط الماستر بأوبر"""
+    if not text:
+        return False
+    norm = _normalize_arabic(text)
+    for phrase in UBER_MASTER_TRIGGERS:
+        if _normalize_arabic(phrase) in norm:
+            return True
+    has_master = any(w in norm for w in ['ماستر', 'master', 'بطاقه', 'بطاقة', 'كارد'])
+    has_link   = any(w in norm for w in ['ربط', 'اربط', 'اضافه', 'اضافة', 'اضيف'])
+    if has_master and has_link:
+        return True
+    return False
+
+def contains_uber_cancel_question(text: str) -> bool:
+    """يتحقق إذا النص يحتوي على سؤال عن تعويض إلغاء الرحلة"""
+    if not text:
+        return False
+    norm = _normalize_arabic(text)
+    for phrase in UBER_CANCEL_TRIGGERS:
+        if _normalize_arabic(phrase) in norm:
+            return True
+    has_cancel = any(w in norm for w in ['الغاء', 'الغت', 'الغيت', 'الغو'])
+    has_comp   = any(w in norm for w in ['تعويض', 'احصل', 'اطلب', 'فلوس', 'مبلغ'])
+    if has_cancel and has_comp:
+        return True
+    return False
+
+def contains_uber_support_question(text: str) -> bool:
+    """يتحقق إذا النص يحتوي على سؤال عن دعم أوبر"""
+    if not text:
+        return False
+    norm = _normalize_arabic(text)
+    for phrase in UBER_SUPPORT_TRIGGERS:
+        if _normalize_arabic(phrase) in norm:
+            return True
+    has_uber    = 'اوبر' in norm
+    has_support = any(w in norm for w in ['دعم', 'سبورت', 'كول سنتر', 'كولسنتر', 'اراسل', 'اتواصل', 'خدمه', 'خدمة', 'شركه', 'شركة'])
+    if has_uber and has_support:
+        return True
+    return False
+
+def contains_uber_trips_question(text: str) -> bool:
+    """يتحقق إذا النص يحتوي على سؤال عن تفاصيل الرحلات"""
+    if not text:
+        return False
+    norm = _normalize_arabic(text)
+    for phrase in UBER_TRIPS_TRIGGERS:
+        if _normalize_arabic(phrase) in norm:
+            return True
+    has_trip    = any(w in norm for w in ['رحله', 'رحلة', 'رحلات', 'تريب', 'trip'])
+    has_details = any(w in norm for w in ['تفاصيل', 'اطلع', 'اشوف', 'اعرف', 'سجل', 'تاريخ', 'معلومات'])
+    if has_trip and has_details:
+        return True
     return False
 
 def contains_greeting(text: str) -> bool:
@@ -1351,26 +1548,32 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
     try:
         text = transcribe_voice_local(file_path)
         print(f"📝 نص البصمة: {text}")
+
+        def send_video(key, label):
+            try:
+                bot_instance.send_video(
+                    chat_id,
+                    FIXED_VIDEOS[key],
+                    caption=CHANNEL,
+                    reply_to_message_id=message_id
+                )
+            except Exception as e:
+                print(f"⚠️ خطأ في إرسال فيديو {label}: {e}")
+
         if text and contains_uber_pay_question(text):
-            try:
-                bot_instance.send_video(
-                    chat_id,
-                    FIXED_VIDEOS['uber_pay'],
-                    caption=CHANNEL,
-                    reply_to_message_id=message_id
-                )
-            except Exception as e:
-                print(f"⚠️ خطأ في إرسال فيديو تسديد أوبر: {e}")
+            send_video('uber_pay', 'تسديد أوبر')
         elif text and contains_uber_withdraw_question(text):
-            try:
-                bot_instance.send_video(
-                    chat_id,
-                    FIXED_VIDEOS['uber_withdraw'],
-                    caption=CHANNEL,
-                    reply_to_message_id=message_id
-                )
-            except Exception as e:
-                print(f"⚠️ خطأ في إرسال فيديو سحب المستحقات: {e}")
+            send_video('uber_withdraw', 'سحب المستحقات')
+        elif text and contains_uber_careem_question(text):
+            send_video('uber_careem', 'ربط كريم')
+        elif text and contains_uber_master_question(text):
+            send_video('uber_master', 'ربط الماستر')
+        elif text and contains_uber_cancel_question(text):
+            send_video('uber_cancel', 'تعويض الإلغاء')
+        elif text and contains_uber_support_question(text):
+            send_video('uber_support', 'دعم أوبر')
+        elif text and contains_uber_trips_question(text):
+            send_video('uber_trips', 'تفاصيل الرحلات')
         elif text and contains_greeting(text):
             pass
         else:
