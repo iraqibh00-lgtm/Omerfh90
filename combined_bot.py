@@ -1206,7 +1206,8 @@ def transcribe_voice_local(file_path: str) -> str:
                 file=(file_path, audio_file.read()),
                 model="whisper-large-v3",
                 language="ar",
-                response_format="text"
+                response_format="text",
+                prompt="هذا كلام باللهجة العراقية. اكتب الكلمات كما ينطقها المتحدث بالعراقي بدون تحويل للفصحى."
             )
         return transcription.strip() if transcription else ""
     except Exception as e:
