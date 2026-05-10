@@ -1313,6 +1313,13 @@ UBER_WITHDRAW_TRIGGERS = [
     'ارباحي باوبر', 'شلون اسحب ارباحي',
     'اموالي باوبر', 'شلون اطلع اموالي',
     'حسابي باوبر فيه فلوس', 'شلون اسحب من حسابي',
+    # كريم
+    'شلون اسحب فلوسي بكريم', 'شلون اسحب فلوسي من كريم',
+    'سحب فلوسي من كريم', 'سحب مستحقات كريم',
+    'كيف اسحب من كريم', 'شلون اسحب من كريم',
+    'فلوسي بكريم', 'مستحقات كريم',
+    'اسحب فلوسي من كريم', 'اطلع فلوسي من كريم',
+    'ارباحي بكريم', 'شلون اطلع فلوسي من كريم',
 ]
 
 UBER_CAREEM_TRIGGERS = [
@@ -1387,6 +1394,17 @@ UBER_SUPPORT_TRIGGERS = [
     'شلون ارفع شكوى', 'ارفع شكوى باوبر',
     'عندي مشكله باوبر شلون', 'عندي مشكلة باوبر',
     'شلون اشتكي باوبر', 'اشتكي باوبر',
+    # ويه (عراقي = مع)
+    'شلون اتواصل ويه الدعم', 'اتواصل ويه الدعم',
+    'شلون اتواصل ويه اوبر', 'اتواصل ويه اوبر',
+    'شلون احجي ويه اوبر', 'احجي ويه اوبر',
+    'شلون اراسل الدعم مال اوبر', 'اراسل الدعم مال اوبر',
+    'الدعم مال اوبر', 'الدعم مالت اوبر',
+    'احد يعملني شلون اتواصل ويه الدعم',
+    'احد يعلمني شلون اتواصل ويه الدعم',
+    'اكو طريقه اتواصل ويه الدعم', 'اكو طريقه اتواصل مع الدعم',
+    'طريقه اتواصل ويه اوبر', 'طريقه التواصل ويه اوبر',
+    'ويه الدعم مال اوبر', 'ويه دعم اوبر',
 ]
 
 UBER_TRIPS_TRIGGERS = [
@@ -1437,10 +1455,10 @@ def contains_uber_withdraw_question(text: str) -> bool:
     for phrase in UBER_WITHDRAW_TRIGGERS:
         if _normalize_arabic(phrase) in norm:
             return True
-    # طريقة 2: وجود كلمة أوبر + كلمة سحب معاً (يغطي أي صياغة من Whisper)
-    has_uber = 'اوبر' in norm
-    has_withdraw = any(w in norm for w in ['سحب', 'اسحب', 'مستحقات', 'فلوس', 'ارباح', 'السحب'])
-    if has_uber and has_withdraw:
+    # طريقة 2: وجود كلمة أوبر أو كريم + كلمة سحب معاً
+    has_app = 'اوبر' in norm or 'كريم' in norm
+    has_withdraw = any(w in norm for w in ['سحب', 'اسحب', 'مستحقات', 'فلوس', 'ارباح', 'السحب', 'اشيل', 'اطلع'])
+    if has_app and has_withdraw:
         return True
     return False
 
@@ -1509,9 +1527,14 @@ def contains_uber_support_question(text: str) -> bool:
     for phrase in UBER_SUPPORT_TRIGGERS:
         if _normalize_arabic(phrase) in norm:
             return True
-    has_uber    = 'اوبر' in norm
-    has_support = any(w in norm for w in ['دعم', 'سبورت', 'كول سنتر', 'كولسنتر', 'اراسل', 'اتواصل', 'خدمه', 'خدمة', 'شركه', 'شركة'])
+    has_uber    = 'اوبر' in norm or 'الدعم' in norm
+    has_support = any(w in norm for w in ['دعم', 'سبورت', 'كول سنتر', 'كولسنتر', 'اراسل', 'اتواصل', 'احجي', 'اكلم', 'خدمه', 'خدمة', 'شركه', 'شركة', 'ويه', 'مال اوبر', 'مالت اوبر'])
     if has_uber and has_support:
+        return True
+    # كشف "ويه الدعم" حتى بدون ذكر اوبر صريح
+    if 'ويه' in norm and 'دعم' in norm:
+        return True
+    if 'الدعم مال' in norm or 'الدعم مالت' in norm:
         return True
     return False
 
