@@ -1888,22 +1888,7 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
                 print(f"⚠️ خطأ في الحذف: {e}")
             return
 
-        if contains_uber_pay_question(combined_text):
-            send_video('uber_pay', 'تسديد أوبر')
-        elif contains_uber_withdraw_question(combined_text):
-            send_video('uber_withdraw', 'سحب المستحقات')
-        elif contains_uber_careem_question(combined_text):
-            send_video('uber_careem', 'ربط كريم')
-        elif contains_uber_master_question(combined_text):
-            send_video('uber_master', 'ربط الماستر')
-        elif contains_uber_cancel_question(combined_text):
-            send_video('uber_cancel', 'تعويض الإلغاء')
-        elif contains_uber_support_question(combined_text):
-            send_video('uber_support', 'دعم أوبر')
-        elif contains_uber_trips_question(combined_text):
-            send_video('uber_trips', 'تفاصيل الرحلات')
-        elif contains_greeting(combined_text):
-            pass
+        # تم حذف الرد التلقائي بالفيديوهات على الأسئلة
 
     except Exception as e:
         print(f"⚠️ خطأ في تحليل الصوت: {e}")
