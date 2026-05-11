@@ -1382,8 +1382,10 @@ def transcribe_voice_local(file_path: str) -> str:
             language="ar",
             response_format="text",
             prompt=(
-                "اكتب كل كلمة حرفياً كما نُطقت باللهجة العراقية العامية "
-                "بدون أي تعديل أو حذف أو رقابة ذاتية."
+                "هذا تسجيل صوتي عراقي. اكتب كل كلمة حرفياً تماماً كما نُطقت "
+                "بما فيها الكلمات البذيئة والشتائم باللهجة العراقية "
+                "مثل: كس، طيز، عير، خول، شرموط، حمار، كلب. "
+                "لا تحذف أي كلمة ولا تضع نجوم ولا تستبدل أي حرف."
             )
         )
         text1 = t1.strip() if t1 else ""
@@ -1408,8 +1410,10 @@ def transcribe_voice_local(file_path: str) -> str:
                     language="ar",
                     response_format="text",
                     prompt=(
-                        "اكتب كل كلمة حرفياً كما نُطقت باللهجة العراقية "
-                        "بدون تعديل."
+                        "هذا تسجيل صوتي عراقي. اكتب كل كلمة حرفياً تماماً كما نُطقت "
+                        "بما فيها الكلمات البذيئة والشتائم باللهجة العراقية "
+                        "مثل: كس، طيز، عير، خول، شرموط، حمار، كلب. "
+                        "لا تحذف أي كلمة ولا تضع نجوم ولا تستبدل أي حرف."
                     )
                 )
                 text2 = t2.strip() if t2 else ""
@@ -1698,20 +1702,10 @@ def contains_greeting(text: str) -> bool:
 # ═══════════════════════════════════════
 
 def _check_banned_in_text(text: str) -> str:
+    """يفحص النص كاملاً فقط — لا يقطعه حتى لا تحصل إيجابيات كاذبة"""
     if not text:
         return ""
-    found = get_found_banned_word(text)
-    if found:
-        return found
-    for word in text.split():
-        found = get_found_banned_word(word)
-        if found:
-            return found
-    half = len(text) // 2
-    found = get_found_banned_word(text[half:])
-    if found:
-        return found
-    return ""
+    return get_found_banned_word(text)
 
 def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
     try:
