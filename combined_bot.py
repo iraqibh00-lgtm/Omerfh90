@@ -561,9 +561,12 @@ def handle_callbacks(call):
         except: pass
         markup = telebot.types.InlineKeyboardMarkup(row_width=1)
         markup.add(
-            telebot.types.InlineKeyboardButton("🗺 فتح خريطة محطات الغاز", url="https://beautiful-melba-ea1a00.netlify.app/"),
+            telebot.types.InlineKeyboardButton("⛽ محطات الغاز اضغط هنا", url=GAS_STATION_URL),
         )
-        bot.send_message(chat_id, "⛽ اضغط على الزر أدناه لفتح خريطة محطات الغاز:", reply_markup=markup)
+        try:
+            bot.send_photo(chat_id, GAS_STATION_PHOTO, reply_markup=markup)
+        except Exception as e:
+            print(f"خطأ في إرسال محطات الغاز: {e}")
         bot.answer_callback_query(call.id)
         return
 
