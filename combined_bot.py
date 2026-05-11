@@ -37,6 +37,16 @@ BOT_TOKEN        = os.environ.get('BOT_TOKEN',        '7655504363:AAEBZmKP7NzaxI
 OWNER_ID         = int(os.environ.get('OWNER_ID',     '6488083580'))
 ALERT_ADMINS     = {198027774}
 CHANNEL          = 'https://t.me/hawk0000000'
+
+# ═══════════════════════════════════════
+# 👥 المستخدمون الموثوقون — يستطيعون حذف البصمات بـ "ح"
+# ═══════════════════════════════════════
+TRUSTED_USERS = {
+    198027774,
+    6265596285,
+    275721187,
+    5633215088,
+}
 GROUP_LINK       = "https://t.me/FalconsofIraq"
 
 DOWNLOADER_TOKEN = os.environ.get('DOWNLOADER_TOKEN', '8266072398:AAHO8y2Vd-i-3h9MQbx_i2ui2mMl6X9RRcY')
@@ -1433,39 +1443,7 @@ def transcribe_voice_local(file_path: str) -> str:
             results.append(text1)
         print(f"📝 المحاولة 1 (كاملة): {text1}")
 
-        tail_path = file_path.replace('.ogg', '_tail.ogg')
-        try:
-            proc = subprocess.run(
-                ['ffmpeg', '-y', '-sseof', '-10', '-i', file_path,
-                 '-acodec', 'copy', tail_path],
-                capture_output=True,
-                timeout=15
-            )
-            if os.path.exists(tail_path) and os.path.getsize(tail_path) > 500:
-                with open(tail_path, "rb") as tail_file:
-                    tail_data = tail_file.read()
-                t2 = client.audio.transcriptions.create(
-                    file=(os.path.basename(tail_path), tail_data),
-                    model="whisper-large-v3",
-                    language="ar",
-                    response_format="text",
-                    prompt=(
-                        "هذا تسجيل صوتي باللهجة العراقية. اكتب النص كما نُطق حرفياً "
-                        "بدون تغيير أو حذف أي كلمة."
-                    )
-                )
-                text2 = t2.strip() if t2 else ""
-                if text2:
-                    results.append(text2)
-                print(f"📝 المحاولة 2 (النهاية): {text2}")
-        except Exception as e:
-            print(f"⚠️ خطأ في استخراج النهاية: {e}")
-        finally:
-            if os.path.exists(tail_path):
-                try: os.remove(tail_path)
-                except: pass
-
-        combined = ' '.join(results).strip()
+        combined = text1
         print(f"📝 النص المدمج النهائي: {combined}")
         return combined
 
@@ -1909,6 +1887,68 @@ def handle_glitch_command(message):
         target=send_glitch_cycle,
         args=(chat_id, target_user.id, target_msg_id, session_key, 1)
     ).start()
+
+
+# ═══════════════════════════════════════
+# 🗑 أمر "ح" — حذف بصمة بواسطة موثوق
+# ═══════════════════════════════════════
+
+@bot.message_handler(
+    func=lambda m: m.chat.type in ['group', 'supergroup'] and
+                   m.text and m.text.strip() == 'ح' and
+                   m.reply_to_message is not None,
+    content_types=['text']
+)
+def handle_delete_voice_command(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+
+    # فقط المستخدمون الموثوقون أو المشرفون
+    if user_id not in TRUSTED_USERS and not is_admin(chat_id, user_id):
+        return
+
+    target = message.reply_to_message
+
+    # اسم أو معرف المُبلِّغ
+    reporter = message.from_user
+    if reporter.username:
+        reporter_info = f"@{reporter.username}"
+    else:
+        name = reporter.first_name or ""
+        if reporter.last_name:
+            name += f" {reporter.last_name}"
+        reporter_info = name.strip() or str(user_id)
+
+    # إرسال البصمة لكروب الإدارة مع اسم المُبلِّغ
+    try:
+        if target.voice or target.photo or target.video:
+            bot.forward_message(ADMIN_GROUP_ID, chat_id, target.message_id)
+            media_type = "بصمة صوتية" if target.voice else "صورة" if target.photo else "فيديو"
+            bot.send_message(
+                ADMIN_GROUP_ID,
+                f"🚨 تم التبليغ عن {media_type} وحذفها\n"
+                f"👤 المُبلِّغ: {reporter_info}\n"
+                f"👥 المجموعة: {message.chat.title or chat_id}"
+            )
+        else:
+            bot.send_message(
+                ADMIN_GROUP_ID,
+                f"🚨 تم حذف رسالة بواسطة أمر ح\n"
+                f"👤 المُبلِّغ: {reporter_info}\n"
+                f"👥 المجموعة: {message.chat.title or chat_id}"
+            )
+    except Exception as e:
+        print(f"⚠️ خطأ في إرسال التبليغ للإدارة: {e}")
+
+    # يحذف أمر "ح" نفسه
+    try: bot.delete_message(chat_id, message.message_id)
+    except: pass
+
+    # يحذف البصمة أو الرسالة المردود عليها
+    try:
+        bot.delete_message(chat_id, target.message_id)
+    except Exception as e:
+        print(f"⚠️ خطأ في حذف البصمة بأمر ح: {e}")
 
 
 # ═══════════════════════════════════════
