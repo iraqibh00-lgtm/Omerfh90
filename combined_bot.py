@@ -1749,16 +1749,24 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
 
                     short_ctx = get_short_context(combined_text, banned_word)
                     if os.path.exists(file_path):
-                        with open(file_path, 'rb') as audio:
-                            bot_instance.send_voice(
-                                ADMIN_GROUP_ID,
-                                audio,
-                                caption=(
-                                    f"🚨 بصمة مسيئة تم حذفها\n"
-                                    f"🔴 {short_ctx}\n"
-                                    f"👥 كباتن صقور العراق"
-                                )
-                            )
+                        for attempt in range(3):
+                            try:
+                                with open(file_path, 'rb') as audio:
+                                    bot_instance.send_voice(
+                                        ADMIN_GROUP_ID,
+                                        audio,
+                                        caption=(
+                                            f"🚨 بصمة مسيئة تم حذفها\n"
+                                            f"🔴 {short_ctx}\n"
+                                            f"👥 كباتن صقور العراق"
+                                        ),
+                                        timeout=60
+                                    )
+                                break
+                            except Exception as e:
+                                print(f"⚠️ محاولة {attempt+1} فشلت: {e}")
+                                if attempt < 2:
+                                    time.sleep(3)
                 except Exception as e:
                     print(f"⚠️ خطأ في الإرسال للإدارة: {e}")
             try:
