@@ -1919,7 +1919,7 @@ def handle_glitch_command(message):
 # ⛽ أمر النقطتين — إرسال محطات الغاز
 # ═══════════════════════════════════════
 
-GAS_STATION_PHOTO    = "AgACAgIAAyEFAATfSbmEAAIN9WoCLIN4QKgT9jIwkqkBbFJ-RoeSAALQGWsb0WsRSCM5SJOMBBVAAQADAgADeQADOwQ"
+GAS_STATION_PHOTO    = "AgACAgIAAxkBAAIKSGoCMPhBo65v6SouS2vUuYddtYSFAALfFWsbIKwRSGaTja4bU9noAQADAgADeQADOwQ"
 GAS_STATION_URL      = "https://beautiful-melba-ea1a00.netlify.app/"
 ZAIN_CASH_AGENTS_URL = "https://lucent-gumdrop-04886e.netlify.app/"
 KIOSK_URL            = "https://nimble-donut-a5b753.netlify.app/"
