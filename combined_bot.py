@@ -1152,7 +1152,7 @@ def check_and_delete_nsfw(chat_id, message_id, user_id, file_id):
 def ignore_media(message):
     return
 
-@bot.message_handler(func=lambda message: not (message.text and message.text.strip() in ['..', '#', '.', '1', 'تقيد', 'فتح']), content_types=['text', 'photo', 'video'])
+@bot.message_handler(func=lambda message: True, content_types=['text', 'photo', 'video'])
 def handle_hero_logic(message):
     chat_id     = message.chat.id
     user_id     = message.from_user.id
@@ -1161,6 +1161,10 @@ def handle_hero_logic(message):
     word_count  = len(words)
     user_id_str = str(user_id)
     is_group    = message.chat.type in ['group', 'supergroup']
+
+    # استثناء أمر النقطتين — يُعالج بـ handler منفصل
+    if is_group and text.strip() == '..':
+        return
 
     if is_group:
         save_group(chat_id)
@@ -1894,13 +1898,11 @@ GAS_STATION_URL   = "https://beautiful-melba-ea1a00.netlify.app/"
 
 @bot.message_handler(
     func=lambda m: m.chat.type in ['group', 'supergroup'] and
-                   m.text and m.text.strip() == '..' and
-                   m.reply_to_message is not None,
+                   m.text and m.text.strip() == '..',
     content_types=['text']
 )
 def handle_gas_station_command(message):
-    chat_id       = message.chat.id
-    target_msg_id = message.reply_to_message.message_id
+    chat_id = message.chat.id
     try: bot.delete_message(chat_id, message.message_id)
     except: pass
     markup = telebot.types.InlineKeyboardMarkup()
@@ -1908,6 +1910,7 @@ def handle_gas_station_command(message):
         "⛽ محطات الغاز اضغط هنا",
         url=GAS_STATION_URL
     ))
+    target_msg_id = message.reply_to_message.message_id if message.reply_to_message else None
     try:
         bot.send_photo(
             chat_id,
