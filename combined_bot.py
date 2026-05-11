@@ -1940,13 +1940,11 @@ def handle_delete_voice_command(message):
     except Exception as e:
         print(f"⚠️ خطأ في إرسال التبليغ للإدارة: {e}")
 
-    # يحذف أمر "ح" نفسه
-    try: bot.delete_message(chat_id, message.message_id)
-    except: pass
-
-    # يحذف البصمة أو الرسالة المردود عليها
+    # يحذف البصمة أولاً — إذا نجح يحذف "ح"
     try:
         bot.delete_message(chat_id, target.message_id)
+        try: bot.delete_message(chat_id, message.message_id)
+        except: pass
     except Exception as e:
         print(f"⚠️ خطأ في حذف البصمة بأمر ح: {e}")
 
@@ -1991,11 +1989,7 @@ def handle_mute_command(message):
             name += f" {target_user.last_name}"
         target_info = name.strip() or str(target_user.id)
 
-    # يحذف أمر "ت"
-    try: bot.delete_message(chat_id, message.message_id)
-    except: pass
-
-    # تقييد العضو (منع الإرسال لمدة 24 ساعة)
+    # تقييد العضو أولاً — إذا نجح يحذف "ت"
     try:
         until = int(time.time()) + 86400  # 24 ساعة
         bot.restrict_chat_member(
@@ -2009,6 +2003,8 @@ def handle_mute_command(message):
             ),
             until_date=until
         )
+        try: bot.delete_message(chat_id, message.message_id)
+        except: pass
         # إشعار الإدارة
         bot.send_message(
             ADMIN_GROUP_ID,
