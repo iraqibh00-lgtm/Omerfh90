@@ -980,8 +980,6 @@ def handle_private_message(message):
 # ═══════════════════════════════════════
 
 def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
-    """دالة موحدة للتحميل — تعمل مع البوت الرئيسي وبوت التحميل"""
-
     if not YT_DLP_AVAILABLE:
         try:
             bot_instance.send_message(chat_id, "⚠️ خدمة التحميل غير متاحة حالياً.",
@@ -989,7 +987,6 @@ def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
         except: pass
         return
 
-    # تصحيح رابط Shorts
     if 'shorts/' in url:
         url = url.replace('shorts/', 'watch?v=')
 
@@ -1004,7 +1001,6 @@ def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
 
     filename_base = f"video_{chat_id}_{int(time.time())}"
 
-    # ── خيارات yt_dlp — نفس إعدادات البوت الأصلي الذي يعمل ──
     ydl_opts = {
         'format': 'best',
         'outtmpl': f'{filename_base}.%(ext)s',
@@ -1031,24 +1027,17 @@ def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
             info = ydl.extract_info(url, download=True)
-
-            # ── البحث الموثوق عن الملف المحمَّل ──
-            # الطريقة 1: prepare_filename
             guessed = ydl.prepare_filename(info)
-
-            # الطريقة 2: البحث في المجلد لو الامتداد تغيّر
             if not os.path.exists(guessed):
                 for f in os.listdir('.'):
                     if f.startswith(filename_base) and not f.endswith('.part') and not f.endswith('.ytdl'):
                         guessed = f
                         break
-
             downloaded_file = guessed
 
         if not downloaded_file or not os.path.exists(downloaded_file):
             raise FileNotFoundError("الملف لم يُحمَّل بشكل صحيح")
 
-        # ── فحص الحجم (50MB حد تيليغرام) ──
         file_size = os.path.getsize(downloaded_file)
         if file_size > 50 * 1024 * 1024:
             try:
@@ -1059,7 +1048,6 @@ def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
             except: pass
             return
 
-        # ── إرسال الفيديو ──
         with open(downloaded_file, 'rb') as video_file:
             bot_instance.send_video(
                 chat_id,
@@ -1075,7 +1063,6 @@ def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
     except yt_dlp.utils.DownloadError as e:
         err_str = str(e).lower()
         print(f"❌ DownloadError: {e}")
-
         if 'private' in err_str:
             user_msg = "⚠️ الفيديو خاص أو محمي، لا يمكن تحميله."
         elif 'age' in err_str:
@@ -1088,7 +1075,6 @@ def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
             user_msg = "⚠️ هذا الفيديو يتطلب تسجيل دخول."
         else:
             user_msg = "⚠️ حدث خطأ في التحميل. تأكد من الرابط وحاول مجدداً."
-
         try:
             bot_instance.edit_message_text(user_msg, chat_id, status_msg.message_id)
         except: pass
@@ -1112,7 +1098,6 @@ def download_and_send_video(bot_instance, chat_id, reply_to_id, url):
         except: pass
 
     finally:
-        # ── حذف جميع الملفات المؤقتة ──
         for f in os.listdir('.'):
             if f.startswith(filename_base):
                 try: os.remove(f)
@@ -1175,6 +1160,107 @@ def check_and_delete_nsfw(chat_id, message_id, user_id, file_id):
 def ignore_media(message):
     return
 
+# ═══════════════════════════════════════
+# دوال منطق "ح" و"ت" — مستقلة يمكن استدعاؤها من أي مكان
+# ═══════════════════════════════════════
+
+def _do_delete_voice(message):
+    """منطق حذف البصمة — يُستدعى من handle_hero_logic أو handler مستقل"""
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    target  = message.reply_to_message
+
+    reporter = message.from_user
+    if reporter.username:
+        reporter_info = f"@{reporter.username}"
+    else:
+        name = reporter.first_name or ""
+        if reporter.last_name:
+            name += f" {reporter.last_name}"
+        reporter_info = name.strip() or str(user_id)
+
+    try:
+        if target.voice or target.photo or target.video:
+            bot.forward_message(ADMIN_GROUP_ID, chat_id, target.message_id)
+            media_type = "بصمة صوتية" if target.voice else "صورة" if target.photo else "فيديو"
+            bot.send_message(
+                ADMIN_GROUP_ID,
+                f"🚨 تم التبليغ عن {media_type} وحذفها\n"
+                f"👤 المُبلِّغ: {reporter_info}\n"
+                f"👥 المجموعة: {message.chat.title or chat_id}"
+            )
+        else:
+            bot.send_message(
+                ADMIN_GROUP_ID,
+                f"🚨 تم حذف رسالة بواسطة أمر ح\n"
+                f"👤 المُبلِّغ: {reporter_info}\n"
+                f"👥 المجموعة: {message.chat.title or chat_id}"
+            )
+    except Exception as e:
+        print(f"⚠️ خطأ في إرسال التبليغ للإدارة: {e}")
+
+    try:
+        bot.delete_message(chat_id, target.message_id)
+        print(f"✅ تم حذف البصمة {target.message_id} بنجاح")
+        try: bot.delete_message(chat_id, message.message_id)
+        except: pass
+    except Exception as e:
+        print(f"⚠️ فشل حذف البصمة {target.message_id} في كروب {chat_id}: {e}")
+
+
+def _do_mute_user(message):
+    """منطق تقييد العضو — يُستدعى من handle_hero_logic أو handler مستقل"""
+    user_id     = message.from_user.id
+    chat_id     = message.chat.id
+    target_user = message.reply_to_message.from_user
+
+    if not target_user:
+        return
+
+    reporter = message.from_user
+    if reporter.username:
+        reporter_info = f"@{reporter.username}"
+    else:
+        name = reporter.first_name or ""
+        if reporter.last_name:
+            name += f" {reporter.last_name}"
+        reporter_info = name.strip() or str(user_id)
+
+    if target_user.username:
+        target_info = f"@{target_user.username}"
+    else:
+        name = target_user.first_name or ""
+        if target_user.last_name:
+            name += f" {target_user.last_name}"
+        target_info = name.strip() or str(target_user.id)
+
+    try:
+        until = int(time.time()) + 86400
+        bot.restrict_chat_member(
+            chat_id,
+            target_user.id,
+            telebot.types.ChatPermissions(
+                can_send_messages=False,
+                can_send_media_messages=False,
+                can_send_other_messages=False,
+                can_add_web_page_previews=False
+            ),
+            until_date=until
+        )
+        try: bot.delete_message(chat_id, message.message_id)
+        except: pass
+        bot.send_message(
+            ADMIN_GROUP_ID,
+            f"🔇 تم تقييد عضو\n"
+            f"👤 العضو: {target_info}\n"
+            f"⏱ المدة: 24 ساعة\n"
+            f"👮 بواسطة: {reporter_info}\n"
+            f"👥 المجموعة: {message.chat.title or chat_id}"
+        )
+    except Exception as e:
+        print(f"⚠️ خطأ في تقييد العضو: {e}")
+
+
 @bot.message_handler(func=lambda message: True, content_types=['text', 'photo', 'video'])
 def handle_hero_logic(message):
     chat_id     = message.chat.id
@@ -1184,6 +1270,18 @@ def handle_hero_logic(message):
     word_count  = len(words)
     user_id_str = str(user_id)
     is_group    = message.chat.type in ['group', 'supergroup']
+
+    # ✅ الإصلاح الرئيسي — فحص "ح" و"ت" قبل أي شيء آخر
+    if is_group and message.reply_to_message:
+        if text.strip() == 'ح':
+            if user_id in TRUSTED_USERS or is_admin(chat_id, user_id):
+                _do_delete_voice(message)
+            return
+
+        if text.strip() == 'ت':
+            if user_id in TRUSTED_USERS or is_admin(chat_id, user_id):
+                _do_mute_user(message)
+            return
 
     # أمر النقطتين — إرسال صورة مع أزرار
     if is_group and text.strip() == '..':
@@ -1718,7 +1816,6 @@ def contains_greeting(text: str) -> bool:
 # ═══════════════════════════════════════
 
 def _check_banned_in_text(text: str) -> str:
-    """يفحص النص كاملاً فقط — لا يقطعه حتى لا تحصل إيجابيات كاذبة"""
     if not text:
         return ""
     return get_found_banned_word(text)
@@ -1744,7 +1841,6 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
 
         banned_word = _check_banned_in_text(combined_text)
 
-        # الكروبات التي تُحذف منها البصمة لكن لا تُحوَّل للإدارة
         VOICE_NO_FORWARD_GROUPS = {-1003980016517}
 
         if banned_word:
@@ -1868,155 +1964,6 @@ def send_glitch_cycle(chat_id, target_user_id, target_msg_id, session_key, count
     except Exception as e:
         print(f"glitch error: {e}")
 
-@bot.message_handler(
-    func=lambda m: m.chat.type in ['group', 'supergroup'] and
-                   m.text and m.text.strip() == '#' and
-                   m.reply_to_message is not None,
-    content_types=['text']
-)
-def handle_glitch_command(message):
-    if not is_admin(message.chat.id, message.from_user.id):
-        return
-    chat_id       = message.chat.id
-    target_msg_id = message.reply_to_message.message_id
-    target_user   = message.reply_to_message.from_user
-    session_key   = f"{chat_id}_{target_msg_id}"
-    try: bot.delete_message(chat_id, message.message_id)
-    except: pass
-    threading.Thread(
-        target=send_glitch_cycle,
-        args=(chat_id, target_user.id, target_msg_id, session_key, 1)
-    ).start()
-
-
-# ═══════════════════════════════════════
-# 🗑 أمر "ح" — حذف بصمة بواسطة موثوق
-# ═══════════════════════════════════════
-
-@bot.message_handler(
-    func=lambda m: m.chat.type in ['group', 'supergroup'] and
-                   m.text and m.text.strip() == 'ح' and
-                   m.reply_to_message is not None,
-    content_types=['text']
-)
-def handle_delete_voice_command(message):
-    user_id = message.from_user.id
-    chat_id = message.chat.id
-
-    # فقط المستخدمون الموثوقون أو المشرفون
-    if user_id not in TRUSTED_USERS and not is_admin(chat_id, user_id):
-        return
-
-    target = message.reply_to_message
-
-    # اسم أو معرف المُبلِّغ
-    reporter = message.from_user
-    if reporter.username:
-        reporter_info = f"@{reporter.username}"
-    else:
-        name = reporter.first_name or ""
-        if reporter.last_name:
-            name += f" {reporter.last_name}"
-        reporter_info = name.strip() or str(user_id)
-
-    # إرسال البصمة لكروب الإدارة مع اسم المُبلِّغ
-    try:
-        if target.voice or target.photo or target.video:
-            bot.forward_message(ADMIN_GROUP_ID, chat_id, target.message_id)
-            media_type = "بصمة صوتية" if target.voice else "صورة" if target.photo else "فيديو"
-            bot.send_message(
-                ADMIN_GROUP_ID,
-                f"🚨 تم التبليغ عن {media_type} وحذفها\n"
-                f"👤 المُبلِّغ: {reporter_info}\n"
-                f"👥 المجموعة: {message.chat.title or chat_id}"
-            )
-        else:
-            bot.send_message(
-                ADMIN_GROUP_ID,
-                f"🚨 تم حذف رسالة بواسطة أمر ح\n"
-                f"👤 المُبلِّغ: {reporter_info}\n"
-                f"👥 المجموعة: {message.chat.title or chat_id}"
-            )
-    except Exception as e:
-        print(f"⚠️ خطأ في إرسال التبليغ للإدارة: {e}")
-
-    # يحذف البصمة أولاً — إذا نجح يحذف "ح"
-    try:
-        bot.delete_message(chat_id, target.message_id)
-        try: bot.delete_message(chat_id, message.message_id)
-        except: pass
-    except Exception as e:
-        print(f"⚠️ خطأ في حذف البصمة بأمر ح: {e}")
-
-
-# ═══════════════════════════════════════
-# 🔇 أمر "ت" — تقييد عضو مسيء
-# ═══════════════════════════════════════
-
-@bot.message_handler(
-    func=lambda m: m.chat.type in ['group', 'supergroup'] and
-                   m.text and m.text.strip() == 'ت' and
-                   m.reply_to_message is not None,
-    content_types=['text']
-)
-def handle_mute_command(message):
-    user_id = message.from_user.id
-    chat_id = message.chat.id
-
-    if user_id not in TRUSTED_USERS and not is_admin(chat_id, user_id):
-        return
-
-    target_user = message.reply_to_message.from_user
-    if not target_user:
-        return
-
-    # اسم أو معرف المُقيِّد
-    reporter = message.from_user
-    if reporter.username:
-        reporter_info = f"@{reporter.username}"
-    else:
-        name = reporter.first_name or ""
-        if reporter.last_name:
-            name += f" {reporter.last_name}"
-        reporter_info = name.strip() or str(user_id)
-
-    # اسم العضو المُقيَّد
-    if target_user.username:
-        target_info = f"@{target_user.username}"
-    else:
-        name = target_user.first_name or ""
-        if target_user.last_name:
-            name += f" {target_user.last_name}"
-        target_info = name.strip() or str(target_user.id)
-
-    # تقييد العضو أولاً — إذا نجح يحذف "ت"
-    try:
-        until = int(time.time()) + 86400  # 24 ساعة
-        bot.restrict_chat_member(
-            chat_id,
-            target_user.id,
-            telebot.types.ChatPermissions(
-                can_send_messages=False,
-                can_send_media_messages=False,
-                can_send_other_messages=False,
-                can_add_web_page_previews=False
-            ),
-            until_date=until
-        )
-        try: bot.delete_message(chat_id, message.message_id)
-        except: pass
-        # إشعار الإدارة
-        bot.send_message(
-            ADMIN_GROUP_ID,
-            f"🔇 تم تقييد عضو\n"
-            f"👤 العضو: {target_info}\n"
-            f"⏱ المدة: 24 ساعة\n"
-            f"👮 بواسطة: {reporter_info}\n"
-            f"👥 المجموعة: {message.chat.title or chat_id}"
-        )
-    except Exception as e:
-        print(f"⚠️ خطأ في تقييد العضو: {e}")
-
 
 # ═══════════════════════════════════════
 # ⛽ أمر النقطتين — إرسال محطات الغاز
@@ -2026,32 +1973,6 @@ GAS_STATION_PHOTO    = "AgACAgIAAxkBAAIKUGoCNRt313IDhtMyeBehR4LOy2M0AAL6FWsbIKwR
 GAS_STATION_URL      = "https://beautiful-melba-ea1a00.netlify.app/"
 ZAIN_CASH_AGENTS_URL = "https://lucent-gumdrop-04886e.netlify.app/"
 KIOSK_URL            = "https://nimble-donut-a5b753.netlify.app/"
-
-@bot.message_handler(
-    func=lambda m: m.chat.type in ['group', 'supergroup'] and
-                   m.text and m.text.strip() == '..',
-    content_types=['text']
-)
-def handle_gas_station_command(message):
-    chat_id = message.chat.id
-    try: bot.delete_message(chat_id, message.message_id)
-    except: pass
-    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
-    markup.add(
-        telebot.types.InlineKeyboardButton("🏦 وكلاء زين كاش", url=ZAIN_CASH_AGENTS_URL),
-        telebot.types.InlineKeyboardButton("🏪 كشك",            url=KIOSK_URL),
-        telebot.types.InlineKeyboardButton("⛽ محطات الغاز",    url=GAS_STATION_URL),
-    )
-    target_msg_id = message.reply_to_message.message_id if message.reply_to_message else None
-    try:
-        bot.send_photo(
-            chat_id,
-            GAS_STATION_PHOTO,
-            reply_to_message_id=target_msg_id,
-            reply_markup=markup
-        )
-    except Exception as e:
-        print(f"خطأ في إرسال الأزرار: {e}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('glitch_fixed_'))
 def handle_glitch_fixed(call):
@@ -2065,7 +1986,7 @@ def handle_glitch_fixed(call):
 
 
 # ═══════════════════════════════════════
-# 🎬 بوت التحميل المستقل (المصلح)
+# 🎬 بوت التحميل المستقل
 # ═══════════════════════════════════════
 
 dl_bot = telebot.TeleBot(DOWNLOADER_TOKEN)
