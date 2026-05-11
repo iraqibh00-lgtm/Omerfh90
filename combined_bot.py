@@ -399,6 +399,7 @@ def get_main_menu():
         telebot.types.InlineKeyboardButton("🟢 حول Baly",      callback_data="menu_baly"),
         telebot.types.InlineKeyboardButton("🟡 حول Oper",      callback_data="menu_oper"),
         telebot.types.InlineKeyboardButton("💳 ماستر كارد",    callback_data="menu_mastercard"),
+        telebot.types.InlineKeyboardButton("⛽ محطات غاز LPG", callback_data="gas_stations"),
     )
     return markup
 
@@ -528,6 +529,51 @@ def handle_callbacks(call):
             except: pass
         except Exception as e:
             print(f"glitch_fixed error: {e}")
+        return
+
+    if data == "gas_stations":
+        try: bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_gas_governorates_menu())
+        except: pass
+        bot.answer_callback_query(call.id)
+        return
+
+    if data == "gas_back_govs":
+        try: bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_gas_governorates_menu())
+        except: pass
+        bot.answer_callback_query(call.id)
+        return
+
+    if data.startswith("gas_gov_"):
+        gov = data[len("gas_gov_"):]
+        try: bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=get_gas_stations_menu(gov))
+        except: pass
+        bot.answer_callback_query(call.id)
+        return
+
+    if data.startswith("gas_st_"):
+        parts = data[len("gas_st_"):].rsplit("_", 1)
+        gov = parts[0]
+        idx = int(parts[1])
+        station = GAS_STATIONS.get(gov, [])[idx]
+        lat, lng = station['lat'], station['lng']
+        waze_url  = f"https://waze.com/ul?ll={lat},{lng}&navigate=yes"
+        gmaps_url = f"https://maps.google.com/?q={lat},{lng}"
+        nav_markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+        nav_markup.add(
+            telebot.types.InlineKeyboardButton("🗺️ Waze",         url=waze_url),
+            telebot.types.InlineKeyboardButton("📍 Google Maps",  url=gmaps_url),
+        )
+        nav_markup.add(telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data=f"gas_gov_{gov}"))
+        try:
+            bot.edit_message_text(
+                f"⛽ *{station['name']}*\n📍 {gov}\n\nاختر التطبيق للملاحة:",
+                chat_id, call.message.message_id,
+                parse_mode="Markdown",
+                reply_markup=nav_markup
+            )
+        except:
+            pass
+        bot.answer_callback_query(call.id)
         return
 
     if data == "menu_uber":
@@ -1945,6 +1991,63 @@ def resolve_default_groups():
         except Exception as e:
             print(f"⚠️ تعذر جلب {username}: {e}")
 
+
+# ═══════════════════════════════════════
+# ⛽ نظام محطات غاز السيارات (LPG)
+# ═══════════════════════════════════════
+
+GAS_STATIONS = {
+    'بغداد': [
+        {'name': 'منفذ الدورة',              'lat': 33.2793375, 'lng': 44.4407656},
+        {'name': 'محطة الكيلاني',            'lat': 33.3331689, 'lng': 44.4179543},
+        {'name': 'محطة المثنى',              'lat': 33.3235125, 'lng': 44.4376406},
+        {'name': 'منفذ بوب الشام',           'lat': 33.4591092, 'lng': 44.3852467},
+        {'name': 'منفذ التاجي',              'lat': 33.4604472, 'lng': 44.2935928},
+        {'name': 'محطة المنصور',             'lat': 33.3164221, 'lng': 44.3674237},
+        {'name': 'منفذ وزارة النفط',         'lat': 33.340868,  'lng': 44.4330001},
+        {'name': 'محطة المشتل',              'lat': 33.3351021, 'lng': 44.4956515},
+        {'name': 'محطة الابتسام',            'lat': 33.37473,   'lng': 44.476142},
+        {'name': 'محطة اضواء دجلة',          'lat': 33.2556167, 'lng': 44.4185782},
+        {'name': 'محطة شواطئ دجلة',          'lat': 33.2561107, 'lng': 44.443097},
+        {'name': 'منفذ كسرة وعطش',           'lat': 33.4048582, 'lng': 44.4407242},
+        {'name': 'منفذ الغزالية',            'lat': 33.3550626, 'lng': 44.2769177},
+        {'name': 'منفذ الصمود',              'lat': 33.2314175, 'lng': 44.3744106},
+        {'name': 'محطة خيرات الرحمن',        'lat': 33.2936037, 'lng': 44.5138181},
+        {'name': 'منفذ غاز السعادة الأهلي',  'lat': 33.4440014, 'lng': 44.5467653},
+        {'name': 'منفذ العامرية',            'lat': 33.2665386, 'lng': 44.3186135},
+        {'name': 'منفذ المشاهدة',            'lat': 33.6096026, 'lng': 44.2324101},
+        {'name': 'محطة الخيامات',            'lat': 33.0671875, 'lng': 44.4490625},
+        {'name': 'محطة جوهرة العدوانية',     'lat': 33.1180997, 'lng': 44.3730322},
+        {'name': 'محطة السيدية',             'lat': 33.2595667, 'lng': 44.3434774},
+        {'name': 'محطة نخيل بغداد الاهلية', 'lat': 33.3390639, 'lng': 44.4603473},
+        {'name': 'محطة وسط البلد الاهلية',  'lat': 33.3188688, 'lng': 44.437527},
+        {'name': 'محطة السفير الاهلية',      'lat': 33.4180929, 'lng': 44.3542662},
+        {'name': 'محطة شهد بغداد',           'lat': 33.5435212, 'lng': 44.3856045},
+    ],
+}
+
+def get_gas_governorates_menu():
+    markup = telebot.types.InlineKeyboardMarkup(row_width=2)
+    buttons = []
+    for gov in GAS_STATIONS.keys():
+        buttons.append(telebot.types.InlineKeyboardButton(
+            f"⛽ {gov}", callback_data=f"gas_gov_{gov}"
+        ))
+    markup.add(*buttons)
+    markup.add(telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data="menu_back"))
+    return markup
+
+def get_gas_stations_menu(governorate):
+    stations = GAS_STATIONS.get(governorate, [])
+    markup = telebot.types.InlineKeyboardMarkup(row_width=1)
+    for i, st in enumerate(stations):
+        markup.add(telebot.types.InlineKeyboardButton(
+            f"📍 {st['name']}", callback_data=f"gas_st_{governorate}_{i}"
+        ))
+    markup.add(telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data="gas_back_govs"))
+    return markup
+
+
 if __name__ == "__main__":
     print("✅ البوت الرئيسي يعمل...")
     resolve_default_groups()
@@ -1959,3 +2062,4 @@ if __name__ == "__main__":
         except Exception as e:
             print(f"⚠️ خطأ: {e}")
             time.sleep(10)
+
