@@ -1952,6 +1952,77 @@ def handle_delete_voice_command(message):
 
 
 # ═══════════════════════════════════════
+# 🔇 أمر "ت" — تقييد عضو مسيء
+# ═══════════════════════════════════════
+
+@bot.message_handler(
+    func=lambda m: m.chat.type in ['group', 'supergroup'] and
+                   m.text and m.text.strip() == 'ت' and
+                   m.reply_to_message is not None,
+    content_types=['text']
+)
+def handle_mute_command(message):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+
+    if user_id not in TRUSTED_USERS and not is_admin(chat_id, user_id):
+        return
+
+    target_user = message.reply_to_message.from_user
+    if not target_user:
+        return
+
+    # اسم أو معرف المُقيِّد
+    reporter = message.from_user
+    if reporter.username:
+        reporter_info = f"@{reporter.username}"
+    else:
+        name = reporter.first_name or ""
+        if reporter.last_name:
+            name += f" {reporter.last_name}"
+        reporter_info = name.strip() or str(user_id)
+
+    # اسم العضو المُقيَّد
+    if target_user.username:
+        target_info = f"@{target_user.username}"
+    else:
+        name = target_user.first_name or ""
+        if target_user.last_name:
+            name += f" {target_user.last_name}"
+        target_info = name.strip() or str(target_user.id)
+
+    # يحذف أمر "ت"
+    try: bot.delete_message(chat_id, message.message_id)
+    except: pass
+
+    # تقييد العضو (منع الإرسال لمدة 24 ساعة)
+    try:
+        until = int(time.time()) + 86400  # 24 ساعة
+        bot.restrict_chat_member(
+            chat_id,
+            target_user.id,
+            telebot.types.ChatPermissions(
+                can_send_messages=False,
+                can_send_media_messages=False,
+                can_send_other_messages=False,
+                can_add_web_page_previews=False
+            ),
+            until_date=until
+        )
+        # إشعار الإدارة
+        bot.send_message(
+            ADMIN_GROUP_ID,
+            f"🔇 تم تقييد عضو\n"
+            f"👤 العضو: {target_info}\n"
+            f"⏱ المدة: 24 ساعة\n"
+            f"👮 بواسطة: {reporter_info}\n"
+            f"👥 المجموعة: {message.chat.title or chat_id}"
+        )
+    except Exception as e:
+        print(f"⚠️ خطأ في تقييد العضو: {e}")
+
+
+# ═══════════════════════════════════════
 # ⛽ أمر النقطتين — إرسال محطات الغاز
 # ═══════════════════════════════════════
 
