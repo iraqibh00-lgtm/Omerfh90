@@ -1901,7 +1901,7 @@ def handle_glitch_command(message):
 # ⛽ أمر النقطتين — إرسال محطات الغاز
 # ═══════════════════════════════════════
 
-GAS_STATION_PHOTO = "https://k.top4top.io/p_3783heyiw0.png"
+GAS_STATION_PHOTO = "AgACAgIAAxkBAAIKI2oB4m7LjZUbjJ6h4HJTs7j2XSwCAAIqFWsbIKwJSHO9LMp9GiEaAQADAgADeQADOwQ"
 GAS_STATION_URL   = "https://beautiful-melba-ea1a00.netlify.app/"
 
 @bot.message_handler(
