@@ -1170,8 +1170,20 @@ def handle_hero_logic(message):
     user_id_str = str(user_id)
     is_group    = message.chat.type in ['group', 'supergroup']
 
-    # استثناء أمر النقطتين — يُعالج بـ handler منفصل
+    # أمر النقطتين — إرسال صورة محطات الغاز
     if is_group and text.strip() == '..':
+        try: bot.delete_message(chat_id, message.message_id)
+        except: pass
+        markup = telebot.types.InlineKeyboardMarkup()
+        markup.add(telebot.types.InlineKeyboardButton(
+            "⛽ محطات الغاز اضغط هنا",
+            url=GAS_STATION_URL
+        ))
+        target_msg_id = message.reply_to_message.message_id if message.reply_to_message else None
+        try:
+            bot.send_photo(chat_id, GAS_STATION_PHOTO, reply_to_message_id=target_msg_id, reply_markup=markup)
+        except Exception as e:
+            print(f"خطأ في إرسال محطات الغاز: {e}")
         return
 
     if is_group:
