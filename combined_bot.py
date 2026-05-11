@@ -561,7 +561,7 @@ def handle_callbacks(call):
         except: pass
         markup = telebot.types.InlineKeyboardMarkup(row_width=1)
         markup.add(
-            telebot.types.InlineKeyboardButton("🗺 فتح خريطة محطات الغاز", web_app=telebot.types.WebAppInfo(url="https://beautiful-melba-ea1a00.netlify.app/")),
+            telebot.types.InlineKeyboardButton("🗺 فتح خريطة محطات الغاز", url="https://beautiful-melba-ea1a00.netlify.app/"),
         )
         bot.send_message(chat_id, "⛽ اضغط على الزر أدناه لفتح خريطة محطات الغاز:", reply_markup=markup)
         bot.answer_callback_query(call.id)
@@ -1177,7 +1177,7 @@ def handle_hero_logic(message):
         markup = telebot.types.InlineKeyboardMarkup()
         markup.add(telebot.types.InlineKeyboardButton(
             "⛽ محطات الغاز اضغط هنا",
-            web_app=telebot.types.WebAppInfo(url=GAS_STATION_URL)
+            url=GAS_STATION_URL
         ))
         target_msg_id = message.reply_to_message.message_id if message.reply_to_message else None
         try:
