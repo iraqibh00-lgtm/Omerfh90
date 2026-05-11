@@ -289,6 +289,7 @@ _WORD_WHITELIST = {
 _GLOBAL_SAFE_WORDS = {
     'سنه', 'سنة', 'سنا', 'سنتين', 'سنوات', 'سنين',
     'تكسي', 'التكسي', 'تاكسي', 'التاكسي',
+    'تكسيات', 'التكسيات', 'تاكسيات', 'التاكسيات',
     'جلب', 'الجلب', 'يجلب', 'جلبت', 'جلبوا',
     'زمال', 'الزمال', 'زماله', 'الزماله', 'زمالة', 'الزمالة',
     'مطي', 'المطي', 'مطية', 'المطية', 'مطيه', 'المطيه',
@@ -556,15 +557,13 @@ def handle_callbacks(call):
         return
 
     if data == "menu_gas":
+        try: bot.delete_message(chat_id, call.message.message_id)
+        except: pass
         markup = telebot.types.InlineKeyboardMarkup(row_width=1)
         markup.add(
             telebot.types.InlineKeyboardButton("🗺 فتح خريطة محطات الغاز", url="https://beautiful-melba-ea1a00.netlify.app/"),
-            telebot.types.InlineKeyboardButton("🔙 رجوع", callback_data="menu_back"),
         )
-        try:
-            bot.edit_message_reply_markup(chat_id, call.message.message_id, reply_markup=markup)
-        except:
-            pass
+        bot.send_message(chat_id, "⛽ اضغط على الزر أدناه لفتح خريطة محطات الغاز:", reply_markup=markup)
         bot.answer_callback_query(call.id)
         return
 
@@ -1884,6 +1883,40 @@ def handle_glitch_command(message):
         target=send_glitch_cycle,
         args=(chat_id, target_user.id, target_msg_id, session_key, 1)
     ).start()
+
+
+# ═══════════════════════════════════════
+# ⛽ أمر النقطتين — إرسال محطات الغاز
+# ═══════════════════════════════════════
+
+GAS_STATION_PHOTO = "https://k.top4top.io/p_3783heyiw0.png"
+GAS_STATION_URL   = "https://beautiful-melba-ea1a00.netlify.app/"
+
+@bot.message_handler(
+    func=lambda m: m.chat.type in ['group', 'supergroup'] and
+                   m.text and m.text.strip() == '..' and
+                   m.reply_to_message is not None,
+    content_types=['text']
+)
+def handle_gas_station_command(message):
+    chat_id       = message.chat.id
+    target_msg_id = message.reply_to_message.message_id
+    try: bot.delete_message(chat_id, message.message_id)
+    except: pass
+    markup = telebot.types.InlineKeyboardMarkup()
+    markup.add(telebot.types.InlineKeyboardButton(
+        "⛽ محطات الغاز اضغط هنا",
+        url=GAS_STATION_URL
+    ))
+    try:
+        bot.send_photo(
+            chat_id,
+            GAS_STATION_PHOTO,
+            reply_to_message_id=target_msg_id,
+            reply_markup=markup
+        )
+    except Exception as e:
+        print(f"خطأ في إرسال محطات الغاز: {e}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('glitch_fixed_'))
 def handle_glitch_fixed(call):
