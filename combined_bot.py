@@ -1894,13 +1894,12 @@ GAS_STATION_URL   = "https://beautiful-melba-ea1a00.netlify.app/"
 
 @bot.message_handler(
     func=lambda m: m.chat.type in ['group', 'supergroup'] and
-                   m.text and m.text.strip() == '..' and
-                   m.reply_to_message is not None,
+                   m.text and m.text.strip() == '..',
     content_types=['text']
 )
 def handle_gas_station_command(message):
     chat_id       = message.chat.id
-    target_msg_id = message.reply_to_message.message_id
+    target_msg_id = message.reply_to_message.message_id if message.reply_to_message else None
     try: bot.delete_message(chat_id, message.message_id)
     except: pass
     markup = telebot.types.InlineKeyboardMarkup()
@@ -1912,11 +1911,22 @@ def handle_gas_station_command(message):
         bot.send_photo(
             chat_id,
             GAS_STATION_PHOTO,
+            caption="⛽ محطات الغاز في بغداد",
             reply_to_message_id=target_msg_id,
             reply_markup=markup
         )
+        print("✅ تم إرسال صورة محطات الغاز")
     except Exception as e:
-        print(f"خطأ في إرسال محطات الغاز: {e}")
+        print(f"❌ خطأ في إرسال صورة محطات الغاز: {e}")
+        try:
+            bot.send_message(
+                chat_id,
+                "⛽ محطات الغاز في بغداد",
+                reply_to_message_id=target_msg_id,
+                reply_markup=markup
+            )
+        except Exception as e2:
+            print(f"❌ خطأ في إرسال النص البديل: {e2}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('glitch_fixed_'))
 def handle_glitch_fixed(call):
