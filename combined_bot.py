@@ -1152,7 +1152,7 @@ def check_and_delete_nsfw(chat_id, message_id, user_id, file_id):
 def ignore_media(message):
     return
 
-@bot.message_handler(func=lambda message: True, content_types=['text', 'photo', 'video'])
+@bot.message_handler(func=lambda message: not (message.text and message.text.strip() in ['..', '#', '.', '1', 'تقيد', 'فتح']), content_types=['text', 'photo', 'video'])
 def handle_hero_logic(message):
     chat_id     = message.chat.id
     user_id     = message.from_user.id
@@ -1889,17 +1889,18 @@ def handle_glitch_command(message):
 # ⛽ أمر النقطتين — إرسال محطات الغاز
 # ═══════════════════════════════════════
 
-GAS_STATION_PHOTO = "https://f.top4top.io/p_378359wn20.png"
+GAS_STATION_PHOTO = "https://k.top4top.io/p_3783heyiw0.png"
 GAS_STATION_URL   = "https://beautiful-melba-ea1a00.netlify.app/"
 
 @bot.message_handler(
     func=lambda m: m.chat.type in ['group', 'supergroup'] and
-                   m.text and m.text.strip() == '..',
+                   m.text and m.text.strip() == '..' and
+                   m.reply_to_message is not None,
     content_types=['text']
 )
 def handle_gas_station_command(message):
     chat_id       = message.chat.id
-    target_msg_id = message.reply_to_message.message_id if message.reply_to_message else None
+    target_msg_id = message.reply_to_message.message_id
     try: bot.delete_message(chat_id, message.message_id)
     except: pass
     markup = telebot.types.InlineKeyboardMarkup()
@@ -1911,22 +1912,11 @@ def handle_gas_station_command(message):
         bot.send_photo(
             chat_id,
             GAS_STATION_PHOTO,
-            caption="⛽ محطات الغاز في بغداد",
             reply_to_message_id=target_msg_id,
             reply_markup=markup
         )
-        print("✅ تم إرسال صورة محطات الغاز")
     except Exception as e:
-        print(f"❌ خطأ في إرسال صورة محطات الغاز: {e}")
-        try:
-            bot.send_message(
-                chat_id,
-                "⛽ محطات الغاز في بغداد",
-                reply_to_message_id=target_msg_id,
-                reply_markup=markup
-            )
-        except Exception as e2:
-            print(f"❌ خطأ في إرسال النص البديل: {e2}")
+        print(f"خطأ في إرسال محطات الغاز: {e}")
 
 @bot.callback_query_handler(func=lambda call: call.data.startswith('glitch_fixed_'))
 def handle_glitch_fixed(call):
