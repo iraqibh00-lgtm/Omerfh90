@@ -915,6 +915,14 @@ def handle_admin_input(message):
 # خاص: استقبال فيديو من الأونر للحفظ
 # ═══════════════════════════════════════
 
+@bot.message_handler(content_types=['photo'],
+                     func=lambda m: m.chat.type == 'private' and m.from_user.id == OWNER_ID)
+def handle_private_photo(message):
+    if message.from_user.id in pending_admin:
+        return
+    file_id = message.photo[-1].file_id
+    bot.reply_to(message, f"🖼 <b>File ID الصورة:</b>\n<code>{file_id}</code>", parse_mode="HTML")
+
 @bot.message_handler(content_types=['video'],
                      func=lambda m: m.chat.type == 'private' and m.from_user.id == OWNER_ID)
 def handle_private_video(message):
