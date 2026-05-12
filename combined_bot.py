@@ -1844,48 +1844,7 @@ def analyze_and_delete_voice(bot_instance, chat_id, message_id, file_path):
         VOICE_NO_FORWARD_GROUPS = {-1003980016517}
 
         if banned_word:
-            print(f"🚫 كلمة محظورة وُجدت: {banned_word}")
-            if chat_id not in VOICE_NO_FORWARD_GROUPS:
-                try:
-                    def get_short_context(text, banned):
-                        sentences = re.split(r'[.،؟!]', text)
-                        for s in sentences:
-                            if banned in s.lower():
-                                words = s.strip().split()
-                                for i, w in enumerate(words):
-                                    if banned in w.lower():
-                                        start = max(0, i - 1)
-                                        end   = min(len(words), i + 2)
-                                        return ' '.join(words[start:end])
-                        return banned
-
-                    short_ctx = get_short_context(combined_text, banned_word)
-                    if os.path.exists(file_path):
-                        for attempt in range(3):
-                            try:
-                                with open(file_path, 'rb') as audio:
-                                    bot_instance.send_voice(
-                                        ADMIN_GROUP_ID,
-                                        audio,
-                                        caption=(
-                                            f"🚨 بصمة مسيئة تم حذفها\n"
-                                            f"🔴 {short_ctx}\n"
-                                            f"👥 كباتن صقور العراق"
-                                        ),
-                                        timeout=60
-                                    )
-                                break
-                            except Exception as e:
-                                print(f"⚠️ محاولة {attempt+1} فشلت: {e}")
-                                if attempt < 2:
-                                    time.sleep(3)
-                except Exception as e:
-                    print(f"⚠️ خطأ في الإرسال للإدارة: {e}")
-            try:
-                bot_instance.delete_message(chat_id, message_id)
-                print(f"🚫 تم حذف بصمة تحتوي على: {banned_word}")
-            except Exception as e:
-                print(f"⚠️ خطأ في الحذف: {e}")
+            print(f"⚠️ كلمة محظورة وُجدت لكن الحذف موقوف: {banned_word}")
             return
 
         # تم حذف الرد التلقائي بالفيديوهات على الأسئلة
