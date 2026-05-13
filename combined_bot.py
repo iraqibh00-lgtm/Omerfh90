@@ -85,69 +85,49 @@ _firebase_cred_dict = json.loads(_firebase_cred_raw)
 if 'private_key' in _firebase_cred_dict:
     _firebase_cred_dict['private_key'] = _firebase_cred_dict['private_key'].replace('\\n', '\n')
 
-_FIREBASE_OK = False
 try:
     _cred = credentials.Certificate(_firebase_cred_dict)
     firebase_admin.initialize_app(_cred, {
-        'databaseURL': 'https://iraq-bd17c-default-rtdb.asia-southeast1.firebasedatabase.app'
+        'databaseURL': 'https://skor-f7aef-default-rtdb.firebaseio.com'
     })
-    _FIREBASE_OK = True
     print("✅ Firebase متصل")
 except Exception as _fe:
-    print(f"⚠️ خطأ Firebase: {_fe} — سيتم استخدام الذاكرة المؤقتة")
-
-# ── Fallback في الذاكرة عند فشل Firebase ──
-_memory_requests: dict = {}
+    print(f"⚠️ خطأ Firebase: {_fe}")
 
 def firebase_save_request(chat_id, message_id, user_id, voice_file_id):
-    """حفظ طلب في Firebase أو الذاكرة"""
-    # تحقق إذا فيه طلب محفوظ مسبقاً
-    if _FIREBASE_OK:
-        try:
-            ref = firebase_db.reference(f'requests/{chat_id}')
-            existing = ref.get()
-            if existing:
-                return False
-            ref.set({
-                'message_id': message_id,
-                'user_id': user_id,
-                'voice_file_id': voice_file_id,
-                'timestamp': int(time.time())
-            })
-            return True
-        except Exception as e:
-            print(f"⚠️ خطأ firebase_save_request: {e}")
-    # fallback
-    if chat_id in _memory_requests:
+    """حفظ طلب في Firebase"""
+    try:
+        ref = firebase_db.reference(f'requests/{chat_id}')
+        # تحقق إذا فيه طلب محفوظ مسبقاً
+        existing = ref.get()
+        if existing:
+            return False  # فيه طلب مسبق
+        ref.set({
+            'message_id': message_id,
+            'user_id': user_id,
+            'voice_file_id': voice_file_id,
+            'timestamp': int(time.time())
+        })
+        return True
+    except Exception as e:
+        print(f"⚠️ خطأ firebase_save_request: {e}")
         return False
-    _memory_requests[chat_id] = {
-        'message_id': message_id,
-        'user_id': user_id,
-        'voice_file_id': voice_file_id,
-        'timestamp': int(time.time())
-    }
-    print(f"💾 حُفظ الطلب في الذاكرة — chat_id={chat_id}")
-    return True
 
 def firebase_get_request(chat_id):
     """جلب الطلب المحفوظ"""
-    if _FIREBASE_OK:
-        try:
-            ref = firebase_db.reference(f'requests/{chat_id}')
-            return ref.get()
-        except Exception as e:
-            print(f"⚠️ خطأ firebase_get_request: {e}")
-    # fallback
-    return _memory_requests.get(chat_id)
+    try:
+        ref = firebase_db.reference(f'requests/{chat_id}')
+        return ref.get()
+    except Exception as e:
+        print(f"⚠️ خطأ firebase_get_request: {e}")
+        return None
 
 def firebase_delete_request(chat_id):
     """حذف الطلب بعد التوفيق"""
-    if _FIREBASE_OK:
-        try:
-            firebase_db.reference(f'requests/{chat_id}').delete()
-        except Exception as e:
-            print(f"⚠️ خطأ firebase_delete_request: {e}")
-    _memory_requests.pop(chat_id, None)
+    try:
+        firebase_db.reference(f'requests/{chat_id}').delete()
+    except Exception as e:
+        print(f"⚠️ خطأ firebase_delete_request: {e}")
 
 bot = telebot.TeleBot(BOT_TOKEN)
 DB_FILE      = "users_db.txt"
@@ -1403,20 +1383,12 @@ def handle_hero_logic(message):
             except:
                 requester_mention = "الطالب"
 
-            # بصمة الطالب ردًا على بصمة السائق مع tag السائق
+            # بصمة الطالب فقط — ردًا على بصمة السائق مع tag السائق
             bot.send_voice(
                 chat_id,
                 request['voice_file_id'],
                 caption=f"{driver_mention}",
                 reply_to_message_id=target.message_id
-            )
-
-            # بصمة السائق ردًا على بصمة الطالب مع tag الطالب
-            bot.send_voice(
-                chat_id,
-                target.voice.file_id,
-                caption=f"{requester_mention}",
-                reply_to_message_id=request['message_id']
             )
 
             firebase_delete_request(chat_id)
