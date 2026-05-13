@@ -1335,6 +1335,15 @@ def handle_hero_logic(message):
     user_id_str = str(user_id)
     is_group    = message.chat.type in ['group', 'supergroup']
 
+    # ✅ أمر ٠ — حذف الطلب المحفوظ (بدون حاجة لـ reply)
+    if is_group and text.strip() == '٠':
+        request = firebase_get_request(chat_id)
+        try: bot.delete_message(chat_id, message.message_id)
+        except: pass
+        if request:
+            firebase_delete_request(chat_id)
+        return
+
     # ✅ الإصلاح الرئيسي — فحص "ح" و"ت" قبل أي شيء آخر
     if is_group and message.reply_to_message:
         if text.strip() == 'ح':
@@ -1359,13 +1368,7 @@ def handle_hero_logic(message):
                 )
                 try: bot.delete_message(chat_id, message.message_id)
                 except: pass
-                if saved:
-                    name = target.from_user.first_name or "الطالب"
-                    bot.send_message(chat_id, f"✅ تم حفظ طلب {name} — في انتظار السائق")
-                else:
-                    bot.send_message(chat_id, "⚠️ يوجد طلب محفوظ مسبقاً في هذه المجموعة")
             else:
-                bot.send_message(chat_id, "⚠️ يجب الرد على بصمة صوتية")
                 try: bot.delete_message(chat_id, message.message_id)
                 except: pass
             return
@@ -1417,20 +1420,6 @@ def handle_hero_logic(message):
 
             firebase_delete_request(chat_id)
             bot.send_message(chat_id, f"✅ تم التوفيق بين {requester_mention} و {driver_mention}!")
-            return
-
-        # ✅ أمر ٠ — حذف الطلب المحفوظ
-        if text.strip() == '٠':
-            request = firebase_get_request(chat_id)
-            if not request:
-                try: bot.delete_message(chat_id, message.message_id)
-                except: pass
-                bot.send_message(chat_id, "⚠️ لا يوجد طلب محفوظ حالياً")
-                return
-            firebase_delete_request(chat_id)
-            try: bot.delete_message(chat_id, message.message_id)
-            except: pass
-            bot.send_message(chat_id, "🗑 تم حذف الطلب المحفوظ")
             return
 
     # أمر النقطتين — إرسال صورة مع أزرار
