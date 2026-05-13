@@ -79,19 +79,11 @@ WHITELIST_LINKS = [
 import firebase_admin
 from firebase_admin import credentials, db as firebase_db
 
-_firebase_cred_dict = {
-    "type": "service_account",
-    "project_id": "skor-f7aef",
-    "private_key_id": "843fd4760dc3fa5f04029343559706de65787f8a",
-    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC8OoopAiZPEfiW\noeZFVDAqkicrgaTGWaW4Mm+1tOr8X8DjAltL2Vsg/tz8rL+QiGG1z++P0tOn3zw6\n8Cwx9MvYEouQ2jejbMa37x4577HeVsNoeeNkSLDOKKRFc5w9aWPVvNtiRWkW+oly\n20OoDf4q8G/mEqzDpWMsK7GbMKVV6BT66uz22kGUI0r6QTYpLHHvlEnVw4IkWDvH\nbvRyOdQu4tF3okhtjzFa8zQM+uZFy43wLJAqaWVXsIqIBLezbj8UGXDsYV0WiPV1\n5ie83SbcDp+xH7AfKQa70fL04jUvOQnOYKqSQHtrOEMEFumtsKXdeLicHJ3CtP+U\n6ZTjNjXbAgMBAAECggEAJBhXuTBz1zLbiEtIpJ/V0rwPLd0hE3ZKfK2TVXV5oGbe\nTsn7Zuqp+oRVLVEVNSqqDhrvVhW4R9dbrfOzjerjEi7QO7lU9Q5ddxUwJy0LX1cl\nBspk7CyyVv5dLgJTAkXNAsZCDbDAy8rEg9V/PmFcjbBozOZk4em7wFMqrldgRT41\nYwis3G0FrqA4K+R8MxvSWjK2NPog/Mpupnr02VT0tbnE4Jga+AWy5bIRefDyontU\np2wRLfyBBGyLzxmQE7+jYwQ/FuaNRyVMW1wUaKYksfJkscSis5wUXsXRInt660Ay\nTBsbSAFNY5UyWmgEIPR13eQYOA4Ml0UcZ0K82oSPiQKBgQDbqrx0JRI7irf+0UHr\nflyVe7Vv3D1lkBToU+5kmrq1oNhkOrUh4h2lfVjhzNg+SsRhIvKk7y3YHM+P5t+i\njJhCjoM1GVibmxx+NnexAPT1OXlN+H6iAP9uGREUVr2oIX+krlIB4bI5A67tH9Io\nNk3wNK+OeK1bH7vjfbJ5DOBNuQKBgQDbXKBXp7BpnM7rzskV0Lrzvszd3yiDH5XT\nYGc0Z7hbs69XFAYVCLnPgaIJu65U7F9dOefoPGPVUiZ3bvnlBW9UO120bAUtXikf\nXk20EDzdbxDUcUGPqoGN512uBN3JoRlLx15EZ+eF3K6/D1VbR+QftWVHLti2fAge\nb5PUpimKMwKBgDZRvBREboPGw8UBXfmr350fYDhvD8ejn2fsCVFbabwsMBZo5g2g\n6o/XtTjw/LA6sOEMUVAzzPRZ+4GsJ7T8a1JaB1wEDoM8Egmr0mE0yV4yfiqnvji1\nYnSJQk3zPSbsUbIZYTIR645puMHuUnubIh66CIeEk+mqqT2SAaYpZvYRAoGBAK0k\nHysQoJ27t1dIkE83wVhCcVFuontcotWEcfFbLJi06uDAXUyc5oxytYMZMDC3oU3k\nNreHcwUdIl+CqJur/oNtmDigSjXU7IBl3s8RQflFgPMtsaHD4x4uUDLahHRxQ5Yc\ndrtnh8aQuRz07VpvFBAzDQ1yXHssyvu69eQSgxchAoGAOlMJc2Zo837siDkyLl00\n8teFddtpsb7BxBiPqZUsNN4qfng/f+HlgDTLF8tvWlRwvpqeDpRHdoSKuEbTvx+C\n6WfV7sTPy32P8o2AgUwofS+hngU5SQIk/0g80JoU77VFdJIlkVEaS6AgTSDuVNJe\nmhZ8P8zHtwAuIVboHlGy6gg=\n-----END PRIVATE KEY-----\n",
-    "client_email": "firebase-adminsdk-fbsvc@skor-f7aef.iam.gserviceaccount.com",
-    "client_id": "102509167850570032888",
-    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
-    "token_uri": "https://oauth2.googleapis.com/token",
-    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
-    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40skor-f7aef.iam.gserviceaccount.com",
-    "universe_domain": "googleapis.com"
-}
+_firebase_cred_raw = os.environ.get('FIREBASE_CREDENTIALS', '{}')
+_firebase_cred_dict = json.loads(_firebase_cred_raw)
+# إصلاح الـ private_key — تحويل \\n إلى سطر جديد حقيقي
+if 'private_key' in _firebase_cred_dict:
+    _firebase_cred_dict['private_key'] = _firebase_cred_dict['private_key'].replace('\\n', '\n')
 
 try:
     _cred = credentials.Certificate(_firebase_cred_dict)
