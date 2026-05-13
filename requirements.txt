@@ -4,3 +4,4 @@ yt-dlp
 groq
 faster-whisper
 requests
+firebase-admin
