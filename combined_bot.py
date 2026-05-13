@@ -1383,12 +1383,20 @@ def handle_hero_logic(message):
             except:
                 requester_mention = "الطالب"
 
-            # بصمة الطالب فقط — ردًا على بصمة السائق مع tag السائق
+            # بصمة الطالب ردًا على بصمة السائق مع tag السائق
             bot.send_voice(
                 chat_id,
                 request['voice_file_id'],
                 caption=f"{driver_mention}",
                 reply_to_message_id=target.message_id
+            )
+
+            # بصمة السائق ردًا على بصمة الطالب مع tag الطالب
+            bot.send_voice(
+                chat_id,
+                target.voice.file_id,
+                caption=f"{requester_mention}",
+                reply_to_message_id=request['message_id']
             )
 
             firebase_delete_request(chat_id)
