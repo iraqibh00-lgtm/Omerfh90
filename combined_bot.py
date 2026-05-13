@@ -1356,45 +1356,34 @@ def handle_hero_logic(message):
                 _do_mute_user(message)
             return
 
-        # ✅ أمر ١ — حفظ بصمة الطالب
+        # ✅ أمر ١ — حفظ بصمة الطالب بصمت
         if text.strip() == '١':
             target = message.reply_to_message
+            try: bot.delete_message(chat_id, message.message_id)
+            except: pass
             if target.voice:
-                saved = firebase_save_request(
+                firebase_save_request(
                     chat_id,
                     target.message_id,
                     target.from_user.id,
                     target.voice.file_id
                 )
-                try: bot.delete_message(chat_id, message.message_id)
-                except: pass
-            else:
-                try: bot.delete_message(chat_id, message.message_id)
-                except: pass
             return
 
         # ✅ أمر ٢ — توفيق السائق مع الطالب
         if text.strip() == '٢':
             target = message.reply_to_message
+            try: bot.delete_message(chat_id, message.message_id)
+            except: pass
             if not target.voice:
-                bot.send_message(chat_id, "⚠️ يجب الرد على بصمة صوتية للسائق")
-                try: bot.delete_message(chat_id, message.message_id)
-                except: pass
                 return
             request = firebase_get_request(chat_id)
             if not request:
-                bot.send_message(chat_id, "⚠️ لا يوجد طلب محفوظ — اطلب من الطالب إرسال بصمته أولاً")
-                try: bot.delete_message(chat_id, message.message_id)
-                except: pass
                 return
-            try: bot.delete_message(chat_id, message.message_id)
-            except: pass
 
-            # جلب معلومات السائق والطالب
             driver_user = target.from_user
             driver_mention = f"@{driver_user.username}" if driver_user.username else driver_user.first_name
 
-            # جلب معلومات الطالب من Firebase
             requester_id = request['user_id']
             try:
                 requester_chat = bot.get_chat(requester_id)
@@ -1402,24 +1391,23 @@ def handle_hero_logic(message):
             except:
                 requester_mention = "الطالب"
 
-            # إرسال بصمة الطالب ردًا على بصمة السائق مع tag للسائق
+            # بصمة الطالب ردًا على بصمة السائق مع tag السائق
             bot.send_voice(
                 chat_id,
                 request['voice_file_id'],
-                caption=f"📞 {driver_mention} — بصمة الطالب",
+                caption=f"{driver_mention}",
                 reply_to_message_id=target.message_id
             )
 
-            # إرسال بصمة السائق ردًا على بصمة الطالب مع tag للطالب
+            # بصمة السائق ردًا على بصمة الطالب مع tag الطالب
             bot.send_voice(
                 chat_id,
                 target.voice.file_id,
-                caption=f"🚗 {requester_mention} — بصمة السائق",
+                caption=f"{requester_mention}",
                 reply_to_message_id=request['message_id']
             )
 
             firebase_delete_request(chat_id)
-            bot.send_message(chat_id, f"✅ تم التوفيق بين {requester_mention} و {driver_mention}!")
             return
 
     # أمر النقطتين — إرسال صورة مع أزرار
