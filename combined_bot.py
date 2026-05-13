@@ -73,6 +73,70 @@ WHITELIST_LINKS = [
     'fb.watch'
 ]
 
+# ═══════════════════════════════════════
+# 🔥 Firebase Realtime Database
+# ═══════════════════════════════════════
+import firebase_admin
+from firebase_admin import credentials, db as firebase_db
+
+_firebase_cred_dict = {
+    "type": "service_account",
+    "project_id": "skor-f7aef",
+    "private_key_id": "843fd4760dc3fa5f04029343559706de65787f8a",
+    "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC8OoopAiZPEfiW\noeZFVDAqkicrgaTGWaW4Mm+1tOr8X8DjAltL2Vsg/tz8rL+QiGG1z++P0tOn3zw6\n8Cwx9MvYEouQ2jejbMa37x4577HeVsNoeeNkSLDOKKRFc5w9aWPVvNtiRWkW+oly\n20OoDf4q8G/mEqzDpWMsK7GbMKVV6BT66uz22kGUI0r6QTYpLHHvlEnVw4IkWDvH\nbvRyOdQu4tF3okhtjzFa8zQM+uZFy43wLJAqaWVXsIqIBLezbj8UGXDsYV0WiPV1\n5ie83SbcDp+xH7AfKQa70fL04jUvOQnOYKqSQHtrOEMEFumtsKXdeLicHJ3CtP+U\n6ZTjNjXbAgMBAAECggEAJBhXuTBz1zLbiEtIpJ/V0rwPLd0hE3ZKfK2TVXV5oGbe\nTsn7Zuqp+oRVLVEVNSqqDhrvVhW4R9dbrfOzjerjEi7QO7lU9Q5ddxUwJy0LX1cl\nBspk7CyyVv5dLgJTAkXNAsZCDbDAy8rEg9V/PmFcjbBozOZk4em7wFMqrldgRT41\nYwis3G0FrqA4K+R8MxvSWjK2NPog/Mpupnr02VT0tbnE4Jga+AWy5bIRefDyontU\np2wRLfyBBGyLzxmQE7+jYwQ/FuaNRyVMW1wUaKYksfJkscSis5wUXsXRInt660Ay\nTBsbSAFNY5UyWmgEIPR13eQYOA4Ml0UcZ0K82oSPiQKBgQDbqrx0JRI7irf+0UHr\nflyVe7Vv3D1lkBToU+5kmrq1oNhkOrUh4h2lfVjhzNg+SsRhIvKk7y3YHM+P5t+i\njJhCjoM1GVibmxx+NnexAPT1OXlN+H6iAP9uGREUVr2oIX+krlIB4bI5A67tH9Io\nNk3wNK+OeK1bH7vjfbJ5DOBNuQKBgQDbXKBXp7BpnM7rzskV0Lrzvszd3yiDH5XT\nYGc0Z7hbs69XFAYVCLnPgaIJu65U7F9dOefoPGPVUiZ3bvnlBW9UO120bAUtXikf\nXk20EDzdbxDUcUGPqoGN512uBN3JoRlLx15EZ+eF3K6/D1VbR+QftWVHLti2fAge\nb5PUpimKMwKBgDZRvBREboPGw8UBXfmr350fYDhvD8ejn2fsCVFbabwsMBZo5g2g\n6o/XtTjw/LA6sOEMUVAzzPRZ+4GsJ7T8a1JaB1wEDoM8Egmr0mE0yV4yfiqnvji1\nYnSJQk3zPSbsUbIZYTIR645puMHuUnubIh66CIeEk+mqqT2SAaYpZvYRAoGBAK0k\nHysQoJ27t1dIkE83wVhCcVFuontcotWEcfFbLJi06uDAXUyc5oxytYMZMDC3oU3k\nNreHcwUdIl+CqJur/oNtmDigSjXU7IBl3s8RQflFgPMtsaHD4x4uUDLahHRxQ5Yc\ndrtnh8aQuRz07VpvFBAzDQ1yXHssyvu69eQSgxchAoGAOlMJc2Zo837siDkyLl00\n8teFddtpsb7BxBiPqZUsNN4qfng/f+HlgDTLF8tvWlRwvpqeDpRHdoSKuEbTvx+C\n6WfV7sTPy32P8o2AgUwofS+hngU5SQIk/0g80JoU77VFdJIlkVEaS6AgTSDuVNJe\nmhZ8P8zHtwAuIVboHlGy6gg=\n-----END PRIVATE KEY-----\n",
+    "client_email": "firebase-adminsdk-fbsvc@skor-f7aef.iam.gserviceaccount.com",
+    "client_id": "102509167850570032888",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/firebase-adminsdk-fbsvc%40skor-f7aef.iam.gserviceaccount.com",
+    "universe_domain": "googleapis.com"
+}
+
+try:
+    _cred = credentials.Certificate(_firebase_cred_dict)
+    firebase_admin.initialize_app(_cred, {
+        'databaseURL': 'https://skor-f7aef-default-rtdb.firebaseio.com'
+    })
+    print("✅ Firebase متصل")
+except Exception as _fe:
+    print(f"⚠️ خطأ Firebase: {_fe}")
+
+def firebase_save_request(chat_id, message_id, user_id, voice_file_id):
+    """حفظ طلب في Firebase"""
+    try:
+        ref = firebase_db.reference(f'requests/{chat_id}')
+        # تحقق إذا فيه طلب محفوظ مسبقاً
+        existing = ref.get()
+        if existing:
+            return False  # فيه طلب مسبق
+        ref.set({
+            'message_id': message_id,
+            'user_id': user_id,
+            'voice_file_id': voice_file_id,
+            'timestamp': int(time.time())
+        })
+        return True
+    except Exception as e:
+        print(f"⚠️ خطأ firebase_save_request: {e}")
+        return False
+
+def firebase_get_request(chat_id):
+    """جلب الطلب المحفوظ"""
+    try:
+        ref = firebase_db.reference(f'requests/{chat_id}')
+        return ref.get()
+    except Exception as e:
+        print(f"⚠️ خطأ firebase_get_request: {e}")
+        return None
+
+def firebase_delete_request(chat_id):
+    """حذف الطلب بعد التوفيق"""
+    try:
+        firebase_db.reference(f'requests/{chat_id}').delete()
+    except Exception as e:
+        print(f"⚠️ خطأ firebase_delete_request: {e}")
+
 bot = telebot.TeleBot(BOT_TOKEN)
 DB_FILE      = "users_db.txt"
 VIDEOS_FILE  = "videos_db.json"
@@ -1281,6 +1345,92 @@ def handle_hero_logic(message):
         if text.strip() == 'ت':
             if user_id in TRUSTED_USERS or is_admin(chat_id, user_id):
                 _do_mute_user(message)
+            return
+
+        # ✅ أمر ١ — حفظ بصمة الطالب
+        if text.strip() == '١':
+            target = message.reply_to_message
+            if target.voice:
+                saved = firebase_save_request(
+                    chat_id,
+                    target.message_id,
+                    target.from_user.id,
+                    target.voice.file_id
+                )
+                try: bot.delete_message(chat_id, message.message_id)
+                except: pass
+                if saved:
+                    name = target.from_user.first_name or "الطالب"
+                    bot.send_message(chat_id, f"✅ تم حفظ طلب {name} — في انتظار السائق")
+                else:
+                    bot.send_message(chat_id, "⚠️ يوجد طلب محفوظ مسبقاً في هذه المجموعة")
+            else:
+                bot.send_message(chat_id, "⚠️ يجب الرد على بصمة صوتية")
+                try: bot.delete_message(chat_id, message.message_id)
+                except: pass
+            return
+
+        # ✅ أمر ٢ — توفيق السائق مع الطالب
+        if text.strip() == '٢':
+            target = message.reply_to_message
+            if not target.voice:
+                bot.send_message(chat_id, "⚠️ يجب الرد على بصمة صوتية للسائق")
+                try: bot.delete_message(chat_id, message.message_id)
+                except: pass
+                return
+            request = firebase_get_request(chat_id)
+            if not request:
+                bot.send_message(chat_id, "⚠️ لا يوجد طلب محفوظ — اطلب من الطالب إرسال بصمته أولاً")
+                try: bot.delete_message(chat_id, message.message_id)
+                except: pass
+                return
+            try: bot.delete_message(chat_id, message.message_id)
+            except: pass
+
+            # جلب معلومات السائق والطالب
+            driver_user = target.from_user
+            driver_mention = f"@{driver_user.username}" if driver_user.username else driver_user.first_name
+
+            # جلب معلومات الطالب من Firebase
+            requester_id = request['user_id']
+            try:
+                requester_chat = bot.get_chat(requester_id)
+                requester_mention = f"@{requester_chat.username}" if requester_chat.username else requester_chat.first_name
+            except:
+                requester_mention = "الطالب"
+
+            # إرسال بصمة الطالب ردًا على بصمة السائق مع tag للسائق
+            bot.send_voice(
+                chat_id,
+                request['voice_file_id'],
+                caption=f"📞 {driver_mention} — بصمة الطالب",
+                reply_to_message_id=target.message_id
+            )
+
+            # إرسال بصمة السائق ردًا على بصمة الطالب مع tag للطالب
+            bot.send_voice(
+                chat_id,
+                target.voice.file_id,
+                caption=f"🚗 {requester_mention} — بصمة السائق",
+                reply_to_message_id=request['message_id']
+            )
+
+            firebase_delete_request(chat_id)
+            bot.send_message(chat_id, f"✅ تم التوفيق بين {requester_mention} و {driver_mention}!")
+            return
+
+        # ✅ أمر ٠ — حذف الطلب المحفوظ
+        if text.strip() == '٠':
+            request = firebase_get_request(chat_id)
+            if not request:
+                try: bot.delete_message(chat_id, message.message_id)
+                except: pass
+                bot.send_message(chat_id, "⚠️ لا يوجد طلب محفوظ حالياً")
+                return
+            firebase_delete_request(chat_id)
+            try: bot.delete_message(chat_id, message.message_id)
+            except: pass
+            bot.send_message(chat_id, "🗑 تم حذف الطلب المحفوظ")
             return
 
     # أمر النقطتين — إرسال صورة مع أزرار
