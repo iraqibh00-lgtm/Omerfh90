@@ -1364,11 +1364,11 @@ def handle_hero_logic(message):
             except:
                 requester_mention = "الطالب"
 
-            # بصمة الطالب فقط ردًا على بصمة السائق
+            # بصمة الطالب فقط ردًا على بصمة السائق مع tag الطالب
             bot.send_voice(
                 chat_id,
                 request['voice_file_id'],
-                caption=f"{driver_mention}",
+                caption=f"{requester_mention}",
                 reply_to_message_id=target.message_id
             )
 
