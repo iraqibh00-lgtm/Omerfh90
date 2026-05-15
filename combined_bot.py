@@ -1499,9 +1499,23 @@ def handle_hero_logic(message):
     if '@' in text:
         if 'proxytop' in text.lower() or 'mtproto' in text.lower() or 'proxy' in text.lower():
             return
-        if word_count > 1:
-            try: bot.delete_message(chat_id, message.message_id)
-            except: pass
+        # فحص: هل كل الـ @ موجودة كـ mention entities حقيقية؟
+        _ents = (message.entities or []) + (message.caption_entities or [])
+        _mention_ents = [e for e in _ents if e.type == 'mention']
+        # استخرج كل الكلمات التي تبدأ بـ @
+        _at_words = re.findall(r'@\S+', text)
+        # إذا كل @ هي mention حقيقية وما في كلام زيادة → اتركها
+        if _mention_ents and len(_mention_ents) >= len(_at_words):
+            # تحقق أن النص لا يحتوي شيء غير التاك(ات)
+            _text_without_mentions = text
+            for ent in _mention_ents:
+                _username = text[ent.offset: ent.offset + ent.length]
+                _text_without_mentions = _text_without_mentions.replace(_username, '', 1)
+            if not _text_without_mentions.strip():
+                return  # تاك حقيقي فقط — لا تحذف
+        # غير ذلك: @ مع كلام أو @ مكتوبة يدوياً → احذف فوراً
+        try: bot.delete_message(chat_id, message.message_id)
+        except: pass
         return
 
     if message.content_type == 'text' and is_emoji_only(text):
