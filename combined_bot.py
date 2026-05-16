@@ -1581,6 +1581,45 @@ def handle_hero_logic(message):
         return
 
     if message.content_type in ['photo', 'video']:
+        caption = message.caption or ""
+
+        # ── فحص الكابشن: @ مع كتابة أو رموز → احذف فوراً ──
+        if caption.strip():
+            _cap_ents = (message.caption_entities or [])
+
+            # هل في @ داخل الكابشن؟
+            if '@' in caption:
+                _mention_ents = [e for e in _cap_ents if e.type == 'mention']
+                _at_words = re.findall(r'@\S+', caption)
+                # إذا كل @ هي mention حقيقية والنص لا يحتوي شيء غيرها → اتركها
+                if _mention_ents and len(_mention_ents) >= len(_at_words):
+                    _cap_without_mentions = caption
+                    for ent in _mention_ents:
+                        _uname = caption[ent.offset: ent.offset + ent.length]
+                        _cap_without_mentions = _cap_without_mentions.replace(_uname, '', 1)
+                    if not _cap_without_mentions.strip():
+                        pass  # تاك حقيقي فقط — لا تحذف بسببه
+                    else:
+                        # تاك حقيقي + كتابة زيادة → احذف
+                        try: bot.delete_message(chat_id, message.message_id)
+                        except: pass
+                        return
+                else:
+                    # @ مكتوبة يدوياً أو مع كلام → احذف
+                    try: bot.delete_message(chat_id, message.message_id)
+                    except: pass
+                    return
+
+            # هل الكابشن يحتوي رموز غير نصية مع كتابة؟
+            # إذا فيه إيموجي فقط → اتركها، إذا فيه كلام → احذف
+            cap_words = caption.split()
+            cap_word_count = len(cap_words)
+            if not is_emoji_only(caption) and cap_word_count > 0:
+                # فيه كتابة في الكابشن → احذف
+                try: bot.delete_message(chat_id, message.message_id)
+                except: pass
+                return
+
         if message.content_type == 'photo':
             threading.Thread(
                 target=check_and_delete_nsfw,
